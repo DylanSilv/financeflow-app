@@ -1,13 +1,15 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  CreditCard, 
-  ArrowLeftRight, 
-  Target, 
-  CalendarDays, 
-  Settings 
+import {
+  LayoutDashboard,
+  CreditCard,
+  ArrowLeftRight,
+  Target,
+  CalendarDays,
+  Settings,
+  LogOut,
 } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -19,6 +21,14 @@ const navItems = [
 
 export const MainLayout = () => {
   const location = useLocation();
+  const navigate  = useNavigate();
+  const user   = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-zinc-100 font-sans overflow-hidden">
@@ -56,16 +66,30 @@ export const MainLayout = () => {
         </div>
 
         {/* Footer del Sidebar */}
-        <div className="border-t border-zinc-900 pt-4">
-          <Link to="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-colors">
+        <div className="border-t border-zinc-900 pt-4 space-y-1">
+          <Link
+            to="/settings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-colors"
+          >
             <Settings className="w-4 h-4" />
             Configuración
           </Link>
-          <div className="mt-4 flex items-center gap-3 px-3 py-2">
-            <img src="https://i.pravatar.cc/150?img=11" alt="Avatar" className="w-8 h-8 rounded-full ring-2 ring-zinc-800" />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-white">Usuario Test</span>
-              <span className="text-xs text-zinc-500">Pro Plan</span>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-red-400 hover:bg-zinc-900/40 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
+          </button>
+
+          <div className="mt-2 flex items-center gap-3 px-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+              {user?.name?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-white truncate">{user?.name ?? 'Usuario'}</span>
+              <span className="text-xs text-zinc-500 truncate">{user?.email ?? ''}</span>
             </div>
           </div>
         </div>

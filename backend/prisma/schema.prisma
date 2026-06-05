@@ -6,16 +6,20 @@ datasource db {
   provider = "mysql"
 }
 
+// ─── USER ────────────────────────────────────────────────────
+
 model User {
-  id            String          @id @default(uuid())
-  email         String          @unique
+  id            String         @id @default(uuid())
+  email         String         @unique
   password      String
   name          String
   avatarUrl     String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  // Relaciones
+  accounts      Account[]
+  loans         Loan[]
+  transfers     Transfer[]
   transactions  Transaction[]
   categories    Category[]
   cards         Card[]
@@ -23,29 +27,114 @@ model User {
   savingsGoals  SavingsGoal[]
 }
 
+// ─── ACCOUNT ─────────────────────────────────────────────────
+
+model Account {
+  id             String      @id @default(uuid())
+  name           String
+  type           AccountType
+  icon           String?
+  color          String?
+  initialBalance Decimal     @default(0) @db.Decimal(10, 2)
+  isArchived     Boolean     @default(false)
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions  Transaction[]
+  cards         Card[]
+  fixedExpenses FixedExpense[]
+  transfersFrom Transfer[]    @relation("TransferFrom")
+  transfersTo   Transfer[]    @relation("TransferTo")
+
+  @@unique([name, userId])
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+  BENEFIT
+}
+
+// ─── TRANSFER ────────────────────────────────────────────────
+
+model Transfer {
+  id            String   @id @default(uuid())
+  amount        Decimal  @db.Decimal(10, 2)
+  date          DateTime
+  description   String?
+  fromAccountId String
+  fromAccount   Account  @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Cascade)
+  toAccountId   String
+  toAccount     Account  @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+}
+
+// ─── LOAN ────────────────────────────────────────────────────
+
+model Loan {
+  id                String     @id @default(uuid())
+  name              String
+  lenderName        String?
+  loanType          LoanType
+  originalAmount    Decimal    @db.Decimal(10, 2)
+  totalInstallments Int
+  installmentAmount Decimal    @db.Decimal(10, 2)
+  paidInstallments  Int        @default(0)
+  startDate         DateTime?
+  endDate           DateTime?
+  status            LoanStatus @default(ACTIVE)
+  notes             String?    @db.Text
+  userId            String
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions Transaction[]
+  fixedExpense FixedExpense?
+}
+
+enum LoanType {
+  PERSONAL
+  PURCHASE
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID
+  CANCELLED
+}
+
+// ─── CATEGORY ────────────────────────────────────────────────
+
 model Category {
-  id        String        @id @default(uuid())
-  name      String
-  icon      String?
-  color     String?
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id           String        @id @default(uuid())
+  name         String
+  icon         String?
+  color        String?
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   transactions Transaction[]
 
   @@unique([name, userId])
 }
 
+// ─── CARD ────────────────────────────────────────────────────
+
 model Card {
-  id           String        @id @default(uuid())
-  name         String        // Ej: "Visa Signature"
-  type         CardType
-  limit        Decimal?      @db.Decimal(10, 2)
-  balanceUsed  Decimal       @default(0) @db.Decimal(10, 2)
-  closingDate  Int?          // Día del mes (1-31)
-  dueDate      Int?          // Día del mes (1-31)
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  name        String
+  type        CardType
+  limit       Decimal? @db.Decimal(10, 2)
+  balanceUsed Decimal  @default(0) @db.Decimal(10, 2)
+  closingDate Int?
+  dueDate     Int?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accountId String?
+  account   Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   transactions Transaction[]
 }
@@ -55,26 +144,33 @@ enum CardType {
   DEBIT
 }
 
+// ─── TRANSACTION ─────────────────────────────────────────────
+
 model Transaction {
-  id            String        @id @default(uuid())
+  id            String          @id @default(uuid())
   title         String
   description   String?
-  amount        Decimal       @db.Decimal(10, 2)
+  amount        Decimal         @db.Decimal(10, 2)
   date          DateTime
   type          TransactionType
   paymentMethod PaymentMethod
-  
-  // Relaciones opcionales dependiendo del método de pago
-  categoryId    String?
-  category      Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  cardId        String?
-  card          Card?         @relation(fields: [cardId], references: [id], onDelete: SetNull)
-  
-  userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  cardId String?
+  card   Card?    @relation(fields: [cardId], references: [id], onDelete: SetNull)
+
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  loanId String?
+  loan   Loan?   @relation(fields: [loanId], references: [id], onDelete: SetNull)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum TransactionType {
@@ -89,16 +185,23 @@ enum PaymentMethod {
   BANK_TRANSFER
 }
 
+// ─── FIXED EXPENSE ───────────────────────────────────────────
+
 model FixedExpense {
-  id          String   @id @default(uuid())
-  name        String   // Ej: "Netflix"
-  amount      Decimal  @db.Decimal(10, 2)
-  dueDate     Int      // Día del mes
-  autoPay     Boolean  @default(false)
-  status      ExpenseStatus @default(PENDING)
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String        @id @default(uuid())
+  name    String
+  amount  Decimal       @db.Decimal(10, 2)
+  dueDate Int
+  autoPay Boolean       @default(false)
+  status  ExpenseStatus @default(PENDING)
+  userId  String
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  loanId String? @unique
+  loan   Loan?   @relation(fields: [loanId], references: [id], onDelete: SetNull)
 }
 
 enum ExpenseStatus {
@@ -107,14 +210,15 @@ enum ExpenseStatus {
   OVERDUE
 }
 
+// ─── SAVINGS GOAL ────────────────────────────────────────────
+
 model SavingsGoal {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   name          String
-  targetAmount  Decimal  @db.Decimal(10, 2)
-  currentAmount Decimal  @default(0) @db.Decimal(10, 2)
+  targetAmount  Decimal   @db.Decimal(10, 2)
+  currentAmount Decimal   @default(0) @db.Decimal(10, 2)
   deadline      DateTime?
   color         String?
-  
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -7,7 +8,8 @@ export const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth  = useAuthStore((state) => state.setAuth);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,8 +19,7 @@ export const Login = () => {
     try {
       const response = await api.post('/auth/login', { email, password });
       setAuth(response.data.user, response.data.token);
-      // Redirigir al dashboard o forzar re-render de App.tsx
-      window.location.href = '/'; 
+      navigate('/', { replace: true }); 
     } catch (err: any) {
       setError(err.response?.data?.error || 'Ocurrió un error al iniciar sesión.');
     } finally {

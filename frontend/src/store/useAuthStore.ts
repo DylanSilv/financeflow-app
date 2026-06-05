@@ -10,31 +10,37 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
 }
 
+function loadUser(): User | null {
+  try {
+    return JSON.parse(localStorage.getItem('financeflow_user') ?? 'null');
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => {
-  // Intentar recuperar el token de la sesión anterior
   const storedToken = localStorage.getItem('financeflow_token');
-  // En un entorno real, aquí deberíamos validar el token con el backend al cargar
+  const storedUser  = loadUser();
 
   return {
-    user: null,
-    token: storedToken,
+    user:            storedUser,
+    token:           storedToken,
     isAuthenticated: !!storedToken,
-    isLoading: false,
 
     setAuth: (user, token) => {
       localStorage.setItem('financeflow_token', token);
+      localStorage.setItem('financeflow_user',  JSON.stringify(user));
       set({ user, token, isAuthenticated: true });
     },
 
     logout: () => {
       localStorage.removeItem('financeflow_token');
+      localStorage.removeItem('financeflow_user');
       set({ user: null, token: null, isAuthenticated: false });
-      // Opcional: window.location.href = '/login';
     },
   };
 });

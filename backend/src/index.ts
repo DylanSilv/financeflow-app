@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import transactionRoutes from './routes/transaction.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 // Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
+app.use('/api/v1/dashboard',   dashboardRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
