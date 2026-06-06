@@ -6,6 +6,7 @@ import FixedExpenses from "@/features/fixed-expenses/FixedExpenses";
 import TransactionHistory from "@/features/transactions/TransactionHistory";
 import Savings from "@/features/savings/Savings";
 import { Login } from "@/features/auth/Login";
+import Loans from "@/features/loans/Loans";
 import { useAuthStore } from "@/store/useAuthStore";
 
 function PrivateRoute() {
@@ -25,6 +26,7 @@ function App() {
             <Route path="cards" element={<Cards />} />
             <Route path="transactions" element={<TransactionHistory />} />
             <Route path="fixed-expenses" element={<FixedExpenses />} />
+            <Route path="loans" element={<Loans />} />
             <Route path="savings" element={<Savings />} />
             <Route path="settings" element={<Navigate to="/" replace />} />
           </Route>

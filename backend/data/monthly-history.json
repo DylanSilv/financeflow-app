@@ -1,0 +1,17 @@
+[
+  {"year":2025,"month":2,"income":11948,"expenses":4569,"label":"feb. 25"},
+  {"year":2025,"month":3,"income":18397,"expenses":4569,"label":"mar. 25"},
+  {"year":2025,"month":4,"income":4816,"expenses":5158,"label":"abr. 25"},
+  {"year":2025,"month":5,"income":9206.51,"expenses":3232,"label":"may. 25"},
+  {"year":2025,"month":6,"income":9213,"expenses":12094,"label":"jun. 25"},
+  {"year":2025,"month":7,"income":7744,"expenses":8010,"label":"jul. 25"},
+  {"year":2025,"month":8,"income":7744,"expenses":3925,"label":"ago. 25"},
+  {"year":2025,"month":9,"income":7744,"expenses":2352,"label":"sep. 25"},
+  {"year":2025,"month":10,"income":7744,"expenses":7744,"label":"oct. 25"},
+  {"year":2025,"month":11,"income":7744,"expenses":2035,"label":"nov. 25"},
+  {"year":2026,"month":1,"income":26918,"expenses":28418,"label":"ene. 26"},
+  {"year":2026,"month":2,"income":26918,"expenses":22431,"label":"feb. 26"},
+  {"year":2026,"month":3,"income":27913,"expenses":22205,"label":"mar. 26"},
+  {"year":2026,"month":4,"income":27903,"expenses":40100,"label":"abr. 26"},
+  {"year":2026,"month":5,"income":27903,"expenses":34697,"label":"may. 26"}
+]

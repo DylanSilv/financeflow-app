@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   ComposedChart, Area, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -9,7 +8,6 @@ import {
   Plus, RefreshCw, Target, CreditCard, Building2,
 } from 'lucide-react';
 import { useDashboardData, AccountBalance, ActiveLoan, SavingsGoal } from '@/hooks/useDashboardData';
-import { AddTransactionModal } from '@/features/transactions/AddTransactionModal';
 
 // ─── Formatting ──────────────────────────────────────────────
 
@@ -64,8 +62,13 @@ function AccountCard({ acc }: { acc: AccountBalance }) {
     CHECKING: 'Cuenta corriente', SAVINGS: 'Ahorro',
     CASH: 'Efectivo', BENEFIT: 'Beneficio',
   };
+  const isBenefit = acc.type === 'BENEFIT';
+  const received  = acc.receivedThisMonth;
+
   return (
-    <div className="bg-[#111111] border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
+    <div className={`bg-[#111111] border rounded-xl p-4 flex items-center gap-4 transition-colors ${
+      isBenefit && received ? 'border-emerald-500/40' : 'border-zinc-800'
+    }`}>
       <div
         className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ backgroundColor: acc.color ? `${acc.color}22` : '#3f3f4622' }}
@@ -74,11 +77,27 @@ function AccountCard({ acc }: { acc: AccountBalance }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-white truncate">{acc.name}</p>
-        <p className="text-xs text-zinc-500">{typeLabel[acc.type]}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs text-zinc-500">{typeLabel[acc.type]}</p>
+          {isBenefit && (
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+              received
+                ? 'bg-emerald-500/15 text-emerald-400'
+                : 'bg-zinc-800 text-zinc-500'
+            }`}>
+              {received ? '✓ recibido' : 'pendiente'}
+            </span>
+          )}
+        </div>
       </div>
       <div className="text-right">
-        <p className={`text-sm font-semibold ${isNeg ? 'text-red-400' : 'text-white'}`}>
-          {isNeg ? '-' : ''}${fmt(Math.abs(acc.balance))}
+        <p className={`text-sm font-semibold ${
+          isBenefit && received ? 'text-emerald-400' : isNeg ? 'text-red-400' : 'text-white'
+        }`}>
+          {isBenefit && acc.monthlyAmount
+            ? `$${fmt(acc.monthlyAmount)}`
+            : `${isNeg ? '-' : ''}$${fmt(Math.abs(acc.balance))}`
+          }
         </p>
       </div>
     </div>
@@ -168,7 +187,6 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 // ─── Main Dashboard ──────────────────────────────────────────
 
 export default function Dashboard() {
-  const [modalOpen, setModalOpen] = useState(false);
   const {
     balanceTotal, balanceCuentas, gastosCategorias,
     evolucion, prestamos, ahorros,
@@ -180,10 +198,8 @@ export default function Dashboard() {
   const mExpenses = balanceTotal?.monthExpenses ?? 0;
   const balance   = balanceTotal?.balance        ?? 0;
 
-  // Savings overall progress
-  const savPct = ahorros && ahorros.length > 0
-    ? Math.round(ahorros.reduce((s, g) => s + g.progress, 0) / ahorros.length)
-    : 0;
+  // Total ahorrado (suma de currentAmount de todas las metas)
+  const totalSaved = ahorros ? ahorros.reduce((s, g) => s + g.currentAmount, 0) : 0;
 
   // Evolution data for chart (last 15 months)
   const chartData = (evolucion ?? []).slice(-15).map(d => ({
@@ -218,12 +234,6 @@ export default function Dashboard() {
               <RefreshCw className="w-3.5 h-3.5" /> Reintentar
             </button>
           )}
-          <button
-            onClick={() => setModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
-          >
-            <Plus className="w-4 h-4" /> Nuevo Movimiento
-          </button>
         </div>
       </header>
 
@@ -252,9 +262,9 @@ export default function Dashboard() {
         />
         <MetricCard
           title="Ahorros" loading={loading}
-          amount={`${savPct}%`}
-          sub={`${ahorros?.length ?? 0} objetivos activos`}
-          trend={savPct >= 80 ? 'positive' : savPct >= 40 ? 'neutral' : 'negative'}
+          amount={fmt(totalSaved)}
+          sub={`${ahorros?.length ?? 0} fondos activos`}
+          trend={totalSaved > 0 ? 'positive' : 'neutral'}
           icon={Target}
         />
       </div>
@@ -362,36 +372,62 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Préstamos Activos */}
+        {/* Préstamos Activos — divididos por tipo */}
         <div className="bg-[#111111] border border-zinc-800 p-6 rounded-xl">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-lg font-medium text-white">Préstamos Activos</h3>
+          <div className="flex items-center gap-2 mb-5">
+            <h3 className="text-lg font-medium text-white">Compromisos Activos</h3>
             {!loading && prestamos && (
               <span className="text-xs bg-indigo-500/15 text-indigo-400 px-2 py-0.5 rounded-full">
                 {prestamos.length}
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-500 mb-5">Progreso de pagos</p>
 
           {loading ? (
             <div className="space-y-6">
               {[1, 2, 3].map(i => (
                 <div key={i} className="space-y-2">
-                  <Skeleton h="h-4" w="w-40" />
-                  <Skeleton h="h-1.5" />
-                  <Skeleton h="h-3" w="w-32" />
+                  <Skeleton h="h-4" w="w-40" /><Skeleton h="h-1.5" /><Skeleton h="h-3" w="w-32" />
                 </div>
               ))}
             </div>
           ) : !prestamos || prestamos.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[200px] gap-2 text-center">
               <CreditCard className="w-8 h-8 text-zinc-700" />
-              <p className="text-sm text-zinc-500">Sin préstamos activos</p>
+              <p className="text-sm text-zinc-500">Sin compromisos activos</p>
             </div>
           ) : (
-            <div className="space-y-6 overflow-y-auto max-h-[320px] pr-1">
-              {prestamos.map(loan => <LoanCard key={loan.id} loan={loan} />)}
+            <div className="space-y-6 overflow-y-auto max-h-[360px] pr-1">
+              {/* Préstamos personales */}
+              {prestamos.filter(l => l.loanType === 'PERSONAL').length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-3">
+                    Préstamos
+                  </p>
+                  <div className="space-y-5">
+                    {prestamos.filter(l => l.loanType === 'PERSONAL').map(loan => (
+                      <LoanCard key={loan.id} loan={loan} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Divider */}
+              {prestamos.some(l => l.loanType === 'PERSONAL') && prestamos.some(l => l.loanType === 'PURCHASE') && (
+                <div className="border-t border-zinc-800/60" />
+              )}
+              {/* Compras a crédito */}
+              {prestamos.filter(l => l.loanType === 'PURCHASE').length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-3">
+                    Compras a crédito
+                  </p>
+                  <div className="space-y-5">
+                    {prestamos.filter(l => l.loanType === 'PURCHASE').map(loan => (
+                      <LoanCard key={loan.id} loan={loan} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -427,7 +463,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <AddTransactionModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

@@ -1,44 +1,58 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target } from 'lucide-react';
-import { useSavingsStore } from '@/store/useSavingsStore';
+import { api } from '@/lib/axios';
 
 interface Props {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen:     boolean;
+  onClose:    () => void;
+  onSuccess?: () => void;
 }
 
 const GOAL_COLORS = [
-  { name: 'Emerald', value: 'bg-emerald-500' },
-  { name: 'Indigo', value: 'bg-indigo-500' },
-  { name: 'Purple', value: 'bg-purple-500' },
-  { name: 'Amber', value: 'bg-amber-500' },
-  { name: 'Rose', value: 'bg-rose-500' },
+  { hex: '#10b981', label: 'Esmeralda' },
+  { hex: '#6366f1', label: 'Índigo'    },
+  { hex: '#a855f7', label: 'Violeta'   },
+  { hex: '#f59e0b', label: 'Ámbar'     },
+  { hex: '#f43f5e', label: 'Rosa'      },
+  { hex: '#EC0000', label: 'Rojo'      },
+  { hex: '#06b6d4', label: 'Cyan'      },
 ];
 
-export const AddSavingsGoalModal = ({ isOpen, onClose }: Props) => {
-  const addGoal = useSavingsStore((state) => state.addGoal);
+export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
+  const [name,          setName]          = useState('');
+  const [currentAmount, setCurrentAmount] = useState('');
+  const [hasTarget,     setHasTarget]     = useState(false);
+  const [targetAmount,  setTargetAmount]  = useState('');
+  const [deadline,      setDeadline]      = useState('');
+  const [color,         setColor]         = useState(GOAL_COLORS[0].hex);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
 
-  const [name, setName] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
-  const [deadline, setDeadline] = useState('');
-  const [color, setColor] = useState(GOAL_COLORS[0].value);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !targetAmount) return;
+    if (!name) return;
 
-    addGoal({
-      name,
-      targetAmount: parseFloat(targetAmount),
-      deadline: deadline || undefined,
-      color
-    });
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post('/savings', {
+        name,
+        currentAmount: currentAmount ? parseFloat(currentAmount) : 0,
+        targetAmount:  hasTarget && targetAmount ? parseFloat(targetAmount) : 0,
+        deadline:      hasTarget && deadline ? deadline : null,
+        color,
+      });
 
-    setName('');
-    setTargetAmount('');
-    setDeadline('');
-    onClose();
+      setName(''); setCurrentAmount(''); setTargetAmount('');
+      setDeadline(''); setHasTarget(false);
+      onClose();
+      onSuccess?.();
+    } catch {
+      setError('No se pudo crear la meta de ahorro.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,9 +60,7 @@ export const AddSavingsGoalModal = ({ isOpen, onClose }: Props) => {
       {isOpen && (
         <>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/70 backdrop-blur-md z-40"
           />
@@ -72,69 +84,107 @@ export const AddSavingsGoalModal = ({ isOpen, onClose }: Props) => {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <form onSubmit={handleSubmit} className="p-6 space-y-5">
+
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">¿Para qué estás ahorrando?</label>
+                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Nombre</label>
                   <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ej. Viaje a Japón, Fondo de Emergencia"
+                    type="text" required value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Ej. Fondo de emergencia, Viaje..."
                     className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto Objetivo</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3 text-zinc-600">$</span>
-                      <input
-                        type="number"
-                        required
-                        value={targetAmount}
-                        onChange={(e) => setTargetAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Fecha Límite (Opcional)</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto actual ahorrado</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3 text-zinc-600">$</span>
                     <input
-                      type="date"
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                      className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
+                      type="number" min="0" step="0.01" value={currentAmount}
+                      onChange={e => setCurrentAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
                     />
                   </div>
                 </div>
 
+                {/* Toggle objetivo */}
+                <div
+                  onClick={() => setHasTarget(!hasTarget)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
+                    hasTarget
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : 'bg-[#161616] border-zinc-800 hover:border-zinc-700'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-white">Tengo un objetivo en mente</p>
+                    <p className="text-xs text-zinc-500">Definir monto y fecha límite</p>
+                  </div>
+                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasTarget ? 'bg-emerald-500' : 'bg-zinc-700'}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasTarget ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {hasTarget && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="grid grid-cols-2 gap-4 pt-1">
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto objetivo</label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-3 text-zinc-600">$</span>
+                            <input
+                              type="number" required={hasTarget} min="1" value={targetAmount}
+                              onChange={e => setTargetAmount(e.target.value)}
+                              placeholder="0"
+                              className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Fecha límite (opcional)</label>
+                          <input
+                            type="date" value={deadline}
+                            onChange={e => setDeadline(e.target.value)}
+                            className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Color */}
                 <div className="space-y-3">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Color de la Meta</label>
-                  <div className="flex gap-3">
-                    {GOAL_COLORS.map((c) => (
+                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Color</label>
+                  <div className="flex gap-2.5">
+                    {GOAL_COLORS.map(c => (
                       <button
-                        key={c.value}
-                        type="button"
-                        onClick={() => setColor(c.value)}
-                        className={`w-8 h-8 rounded-full ${c.value} border-2 transition-all ${
-                          color === c.value ? 'border-white scale-110' : 'border-transparent opacity-50'
-                        }`}
+                        key={c.hex} type="button"
+                        onClick={() => setColor(c.hex)}
+                        style={{ backgroundColor: c.hex }}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${color === c.hex ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-80'}`}
+                        title={c.label}
                       />
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl px-4 py-3.5 text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
-                  >
-                    Crear Meta de Ahorro
-                  </button>
-                </div>
+                {error && <p className="text-red-400 text-xs">{error}</p>}
+
+                <button
+                  type="submit" disabled={loading}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl px-4 py-3.5 text-sm transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Guardando...' : 'Crear Ahorro'}
+                </button>
               </form>
             </motion.div>
           </div>

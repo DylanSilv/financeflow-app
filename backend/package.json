@@ -7,7 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "seed": "ts-node --transpile-only prisma/seed.ts",
     "import:dry": "ts-node --transpile-only src/scripts/importer/index.ts --dry-run",
-    "import": "ts-node --transpile-only src/scripts/importer/index.ts"
+    "import": "ts-node --transpile-only src/scripts/importer/index.ts",
+    "import:history": "ts-node --transpile-only src/scripts/importHistory.ts"
   },
   "keywords": [],
   "author": "",

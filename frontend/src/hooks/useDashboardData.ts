@@ -15,11 +15,13 @@ export interface BalanceTotal {
 export interface AccountBalance {
   id:       string;
   name:     string;
-  type:     'CHECKING' | 'SAVINGS' | 'CASH' | 'BENEFIT';
-  color:    string | null;
-  balance:  number;
-  income:   number;
-  expenses: number;
+  type:               'CHECKING' | 'SAVINGS' | 'CASH' | 'BENEFIT';
+  color:              string | null;
+  balance:            number;
+  income:             number;
+  expenses:           number;
+  receivedThisMonth:  boolean | null;
+  monthlyAmount:      number | null;
 }
 
 export interface CategoryExpense {

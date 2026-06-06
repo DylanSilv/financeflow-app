@@ -1,6 +1,8 @@
 import { Response } from 'express';
 import { prisma } from '../lib/Prisma';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Safe Decimal → number (handles null, Decimal objects, strings)
 const N = (v: unknown): number => (v == null ? 0 : Number(v));
@@ -50,10 +52,14 @@ export const getBalanceTotal = async (req: AuthRequest, res: Response) => {
 export const getBalancePorCuenta = async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
 
+  const now        = new Date();
+  const monthStart = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  const monthEnd   = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59);
+
   const accounts = await prisma.account.findMany({
     where: { userId, isArchived: false },
     include: {
-      transactions: { select: { amount: true, type: true } },
+      transactions: { select: { amount: true, type: true, date: true } },
       transfersFrom: { select: { amount: true } },
       transfersTo:   { select: { amount: true } },
     },
@@ -67,9 +73,24 @@ export const getBalancePorCuenta = async (req: AuthRequest, res: Response) => {
     const transfersOut = acc.transfersFrom.reduce((s, t) => s + N(t.amount), 0);
     const balance      = N(acc.initialBalance) + income - expenses + transfersIn - transfersOut;
 
+    // Para cuentas BENEFIT: detectar si ya se recibió el ingreso este mes
+    let receivedThisMonth: boolean | null = null;
+    let monthlyAmount: number | null = null;
+    if (acc.type === 'BENEFIT') {
+      const thisMonthIncome = acc.transactions
+        .filter(t => t.type === 'INCOME' && new Date(t.date) >= monthStart && new Date(t.date) <= monthEnd)
+        .reduce((s, t) => s + N(t.amount), 0);
+      receivedThisMonth = thisMonthIncome > 0;
+      monthlyAmount     = thisMonthIncome > 0 ? thisMonthIncome : income > 0
+        ? Math.round(income / Math.max(1, new Set(acc.transactions.filter(t => t.type === 'INCOME').map(t => `${new Date(t.date).getUTCFullYear()}-${new Date(t.date).getUTCMonth()}`)).size))
+        : null;
+    }
+
     return {
       id: acc.id, name: acc.name, type: acc.type, color: acc.color,
       balance, income, expenses,
+      receivedThisMonth,
+      monthlyAmount,
     };
   });
 
@@ -162,35 +183,52 @@ export const getIngresosPorMes = async (req: AuthRequest, res: Response) => {
 export const getEvolucionPatrimonial = async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
 
-  const [txs, initBalSum] = await Promise.all([
-    prisma.transaction.findMany({
-      where:   { userId },
-      select:  { amount: true, date: true, type: true },
-      orderBy: { date: 'asc' },
-    }),
-    prisma.account.aggregate({
-      where: { userId, isArchived: false },
-      _sum:  { initialBalance: true },
-    }),
-  ]);
+  // ── Historial desde JSON (no afecta balances de cuenta) ──────
+  const historyPath = path.join(__dirname, '../../data/monthly-history.json');
+  type HistEntry = { year: number; month: number; income: number; expenses: number; label: string };
+  let history: HistEntry[] = [];
+  try {
+    history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+  } catch { /* sin archivo histórico */ }
+
+  // ── Transacciones reales de la DB ────────────────────────────
+  const txs = await prisma.transaction.findMany({
+    where:   { userId },
+    select:  { amount: true, date: true, type: true },
+    orderBy: { date: 'asc' },
+  });
 
   type MonthEntry = { year: number; month: number; label: string; income: number; expenses: number };
   const map = new Map<string, MonthEntry>();
+
+  // Cargar historial primero
+  for (const h of history) {
+    const key   = `${h.year}-${String(h.month).padStart(2, '0')}`;
+    const label = h.label;
+    map.set(key, { year: h.year, month: h.month, label, income: h.income, expenses: h.expenses });
+  }
+
+  // Solo agregar meses de DB que NO estén cubiertos por el historial JSON
+  const historicalKeys = new Set(history.map(h => `${h.year}-${String(h.month).padStart(2, '0')}`));
 
   for (const tx of txs) {
     const d     = new Date(tx.date);
     const year  = d.getUTCFullYear();
     const month = d.getUTCMonth() + 1;
-    const key   = `${year}-${String(month).padStart(2, '0')}`;
-    const label = d.toLocaleString('es-UY', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+    const key   = `${year}-${String(month).padStart(2, '00')}`;
 
+    // Saltar meses cubiertos por el historial JSON (están completos)
+    if (historicalKeys.has(key)) continue;
+
+    const label = d.toLocaleString('es-UY', { month: 'short', year: '2-digit', timeZone: 'UTC' });
     if (!map.has(key)) map.set(key, { year, month, label, income: 0, expenses: 0 });
+
     const entry = map.get(key)!;
     tx.type === 'INCOME' ? (entry.income += N(tx.amount)) : (entry.expenses += N(tx.amount));
   }
 
-  let runningBalance = N(initBalSum._sum.initialBalance);
-
+  // Balance acumulado desde 0 (el historial ya es relativo)
+  let runningBalance = 0;
   const result = [...map.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, entry]) => {

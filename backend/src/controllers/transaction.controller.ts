@@ -5,23 +5,44 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 export const getTransactions = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    
-    // Obtenemos los últimos 10 movimientos, incluyendo la categoría asociada
+    const type   = req.query['type']   as string | undefined;
+    const search = req.query['search'] as string | undefined;
+    const take   = (req.query['take']  as string) ?? '50';
+    const skip   = (req.query['skip']  as string) ?? '0';
+
+    const where: Record<string, unknown> = { userId };
+    if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
+    if (search) where.title = { contains: search };
+
     const transactions = await prisma.transaction.findMany({
-      where: { userId },
+      where,
       orderBy: { date: 'desc' },
-      take: 10,
-      include: {
-        category: {
-          select: { name: true, color: true, icon: true }
-        }
-      }
+      take:    Math.min(parseInt(take, 10), 500),
+      skip:    parseInt(skip, 10),
+      include: { category: { select: { name: true, color: true, icon: true } } },
     });
 
-    return res.status(200).json(transactions);
+    return res.status(200).json(
+      transactions.map(t => ({ ...t, amount: Number(t.amount) })),
+    );
   } catch (error) {
     console.error('Error fetching transactions:', error);
     return res.status(500).json({ error: 'Error interno del servidor al obtener movimientos.' });
+  }
+};
+
+export const deleteTransaction = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = req.params['id'] as string;
+    const tx = await prisma.transaction.findFirst({ where: { id, userId } });
+    if (!tx) return res.status(404).json({ error: 'Movimiento no encontrado.' });
+
+    await prisma.transaction.delete({ where: { id } });
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    return res.status(500).json({ error: 'Error al eliminar el movimiento.' });
   }
 };
 
@@ -35,6 +56,18 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Faltan campos obligatorios.' });
     }
 
+    // Find or create category by name if no ID given
+    let resolvedCategoryId = categoryId;
+    const { categoryName, categoryColor } = req.body;
+    if (!resolvedCategoryId && categoryName) {
+      const cat = await prisma.category.upsert({
+        where:  { name_userId: { name: categoryName, userId } },
+        update: {},
+        create: { name: categoryName, color: categoryColor ?? '#71717a', userId },
+      });
+      resolvedCategoryId = cat.id;
+    }
+
     const transaction = await prisma.transaction.create({
       data: {
         title,
@@ -43,7 +76,7 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
         date: new Date(date),
         type,
         paymentMethod,
-        categoryId,
+        categoryId: resolvedCategoryId,
         cardId,
         userId
       }

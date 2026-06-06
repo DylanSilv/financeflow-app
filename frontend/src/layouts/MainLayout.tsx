@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   Target,
   CalendarDays,
+  TrendingDown,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -14,7 +15,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { name: 'Movimientos', icon: ArrowLeftRight, path: '/transactions' },
-  { name: 'Tarjetas', icon: CreditCard, path: '/cards' },
+  { name: 'Tarjetas',      icon: CreditCard,   path: '/cards' },
+  { name: 'Préstamos',     icon: TrendingDown, path: '/loans' },
   { name: 'Cuentas Fijas', icon: CalendarDays, path: '/fixed-expenses' },
   { name: 'Ahorros', icon: Target, path: '/savings' },
 ];
