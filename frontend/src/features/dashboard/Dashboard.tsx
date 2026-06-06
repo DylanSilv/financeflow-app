@@ -5,9 +5,11 @@ import {
 } from 'recharts';
 import {
   ArrowUpRight, ArrowDownRight, Wallet, TrendingUp,
-  Plus, RefreshCw, Target, CreditCard, Building2,
+  RefreshCw, Target, CreditCard, Building2,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useDashboardData, AccountBalance, ActiveLoan, SavingsGoal } from '@/hooks/useDashboardData';
+import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 
 // ─── Formatting ──────────────────────────────────────────────
 
@@ -27,14 +29,24 @@ const Skeleton = ({ h = 'h-8', w = 'w-full' }: { h?: string; w?: string }) => (
 
 type Trend = 'positive' | 'negative' | 'neutral';
 
+function AnimatedAmount({ rawValue, format }: { rawValue: number; format: (n: number) => string }) {
+  const animated = useAnimatedNumber(rawValue);
+  return <>{format(animated)}</>;
+}
+
 function MetricCard({
-  title, amount, sub, trend, icon: Icon, loading,
+  title, amount, rawValue, sub, trend, icon: Icon, loading,
 }: {
-  title: string; amount: string; sub: string;
+  title: string; amount: string; rawValue?: number; sub: string;
   trend: Trend; icon: React.ElementType; loading: boolean;
 }) {
   return (
-    <div className="bg-[#111111] border border-zinc-800 p-6 rounded-xl flex flex-col gap-3">
+    <motion.div
+      className="bg-[#111111] border border-zinc-800 p-6 rounded-xl flex flex-col gap-3"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="flex justify-between items-center text-zinc-400">
         <span className="text-sm font-medium">{title}</span>
         <Icon className="w-5 h-5" />
@@ -43,14 +55,19 @@ function MetricCard({
         <><Skeleton h="h-9" w="w-36" /><Skeleton h="h-4" w="w-24" /></>
       ) : (
         <>
-          <h3 className="text-3xl font-semibold tracking-tight text-white">${amount}</h3>
+          <h3 className="text-3xl font-semibold tracking-tight text-white">
+            {rawValue !== undefined
+              ? <>${<AnimatedAmount rawValue={rawValue} format={n => Math.abs(n).toLocaleString('es-UY', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} />}</>
+              : `$${amount}`
+            }
+          </h3>
           <p className={`text-sm ${
             trend === 'positive' ? 'text-emerald-500' :
             trend === 'negative' ? 'text-red-400' : 'text-zinc-500'
           }`}>{sub}</p>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -241,28 +258,28 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Balance Total" loading={loading}
-          amount={fmtDec(balance)}
+          amount={fmtDec(balance)} rawValue={balance}
           sub={balance >= 0 ? 'Patrimonio neto' : 'Balance negativo'}
           trend={balance >= 0 ? 'positive' : 'negative'}
           icon={Wallet}
         />
         <MetricCard
           title="Ingresos (mes)" loading={loading}
-          amount={fmt(mIncome)}
+          amount={fmt(mIncome)} rawValue={mIncome}
           sub={mIncome > 0 ? `+$${fmt(mIncome)} este mes` : 'Sin ingresos este mes'}
           trend={mIncome > 0 ? 'positive' : 'neutral'}
           icon={ArrowUpRight}
         />
         <MetricCard
           title="Gastos (mes)" loading={loading}
-          amount={fmt(mExpenses)}
+          amount={fmt(mExpenses)} rawValue={mExpenses}
           sub={`-$${fmt(mExpenses)} este mes`}
           trend={mExpenses > 0 ? 'negative' : 'neutral'}
           icon={ArrowDownRight}
         />
         <MetricCard
           title="Ahorros" loading={loading}
-          amount={fmt(totalSaved)}
+          amount={fmt(totalSaved)} rawValue={totalSaved}
           sub={`${ahorros?.length ?? 0} fondos activos`}
           trend={totalSaved > 0 ? 'positive' : 'neutral'}
           icon={Target}
