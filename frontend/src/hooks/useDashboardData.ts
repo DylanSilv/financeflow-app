@@ -75,7 +75,6 @@ export interface DashboardData {
   balanceTotal:       BalanceTotal          | null;
   balanceCuentas:     AccountBalance[]       | null;
   gastosCategorias:   { categories: CategoryExpense[]; total: number } | null;
-  ingresosMes:        MonthlyIncome[]        | null;
   evolucion:          MonthlyEvolution[]     | null;
   prestamos:          ActiveLoan[]           | null;
   ahorros:            SavingsGoal[]          | null;
@@ -91,7 +90,6 @@ export function useDashboardData(): DashboardData {
     balanceTotal:     null,
     balanceCuentas:   null,
     gastosCategorias: null,
-    ingresosMes:      null,
     evolucion:        null,
     prestamos:        null,
     ahorros:          null,
@@ -106,7 +104,6 @@ export function useDashboardData(): DashboardData {
       '/dashboard/balance-total',
       '/dashboard/balance-cuentas',
       '/dashboard/gastos-categoria',
-      '/dashboard/ingresos-mes',
       '/dashboard/evolucion',
       '/dashboard/prestamos',
       '/dashboard/ahorros',
@@ -114,7 +111,7 @@ export function useDashboardData(): DashboardData {
 
     const results = await Promise.allSettled(endpoints.map(ep => api.get(ep)));
 
-    const [rt, rc, rg, ri, re, rp, ra] = results.map(r =>
+    const [rt, rc, rg, re, rp, ra] = results.map(r =>
       r.status === 'fulfilled' ? r.value.data : null,
     );
 
@@ -124,7 +121,6 @@ export function useDashboardData(): DashboardData {
       balanceTotal:     rt,
       balanceCuentas:   rc,
       gastosCategorias: rg,
-      ingresosMes:      ri,
       evolucion:        re,
       prestamos:        rp,
       ahorros:          ra,

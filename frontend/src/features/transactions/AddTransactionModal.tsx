@@ -1,26 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
 import { api } from '@/lib/axios';
 
-interface Account { id: string; name: string; type: string; }
+interface Account  { id: string; name: string; type: string; }
+interface ApiCategory { id: string; name: string; color: string | null; }
 
 interface Props {
   isOpen:    boolean;
   onClose:   () => void;
   onSuccess?: () => void;
 }
-
-const CATEGORIES = [
-  { name: 'Comida',       color: '#ef4444' },
-  { name: 'Trabajo',      color: '#10b981' },
-  { name: 'Ocio',         color: '#a855f7' },
-  { name: 'Transporte',   color: '#eab308' },
-  { name: 'Salud',        color: '#06b6d4' },
-  { name: 'Servicios',    color: '#6366f1' },
-  { name: 'Compras',      color: '#f97316' },
-  { name: 'Sin categoría', color: '#71717a' },
-];
 
 const PAY_METHODS = [
   { value: 'CASH',          label: 'Efectivo' },
@@ -29,46 +19,84 @@ const PAY_METHODS = [
   { value: 'BANK_TRANSFER', label: 'Transferencia' },
 ];
 
+// YYYY-MM-DD en hora local
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Convierte YYYY-MM-DD a ISO con mediodía UTC para evitar drift por timezone
+function toUTCNoon(dateStr: string): string {
+  return `${dateStr}T12:00:00.000Z`;
+}
+
 export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [title,         setTitle]         = useState('');
   const [amount,        setAmount]        = useState('');
+  const [date,          setDate]          = useState(todayISO);
   const [type,          setType]          = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
-  const [category,      setCategory]      = useState(CATEGORIES[0].name);
+  const [categoryId,    setCategoryId]    = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [accountId,     setAccountId]     = useState('');
   const [accounts,      setAccounts]      = useState<Account[]>([]);
+  const [categories,    setCategories]    = useState<ApiCategory[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTitle(''); setAmount(''); setDate(todayISO());
+    setType('EXPENSE'); setCategoryId(''); setPaymentMethod('CASH'); setError(null);
+  }, [isOpen]);
 
   useEffect(() => {
     api.get<Account[]>('/accounts').then(r => {
       setAccounts(r.data);
       if (r.data.length > 0) setAccountId(r.data[0].id);
     }).catch(() => {});
+    api.get<ApiCategory[]>('/categories').then(r => {
+      setCategories(r.data);
+      if (r.data.length > 0) setCategoryId(r.data[0].id);
+    }).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !amount) return;
+    setError(null);
+
+    if (!title.trim()) {
+      setError('El concepto es obligatorio.');
+      return;
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('El monto debe ser mayor a $0.');
+      return;
+    }
+
+    if (!date) {
+      setError('La fecha es obligatoria.');
+      return;
+    }
+    const parsedDate = new Date(toUTCNoon(date));
+    if (isNaN(parsedDate.getTime())) {
+      setError('Fecha inválida.');
+      return;
+    }
 
     setLoading(true);
-    setError(null);
     try {
-      const cat = CATEGORIES.find(c => c.name === category);
       await api.post('/transactions', {
         title,
-        amount:        parseFloat(amount),
+        amount:     parsedAmount,
         type,
-        date:          new Date().toISOString(),
+        date:       toUTCNoon(date),
         paymentMethod,
-        categoryName:  cat?.name,
-        categoryColor: cat?.color,
-        accountId:     accountId || undefined,
+        categoryId: categoryId || undefined,
+        accountId:  accountId || undefined,
       });
 
-      setTitle('');
-      setAmount('');
-      setPaymentMethod('CASH');
       onClose();
       onSuccess?.();
     } catch {
@@ -105,7 +133,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
+
+                {/* Tipo: Gasto / Ingreso */}
                 <div className="flex bg-[#0a0a0a] p-1 rounded-lg border border-zinc-800">
                   {(['EXPENSE', 'INCOME'] as const).map(t => (
                     <button
@@ -123,23 +153,25 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                   ))}
                 </div>
 
+                {/* Concepto */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Concepto</label>
                   <input
-                    type="text" required value={title}
+                    type="text" value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="Ej. Cena con amigos"
                     className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
                   />
                 </div>
 
+                {/* Monto + Fecha */}
                 <div className="flex gap-4">
                   <div className="space-y-2 flex-1">
                     <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Monto</label>
                     <div className="relative">
                       <span className="absolute left-4 top-3 text-zinc-500">$</span>
                       <input
-                        type="number" required step="0.01" value={amount}
+                        type="number" step="0.01" min="0.01" value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="0.00"
                         className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
@@ -148,32 +180,50 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                   </div>
 
                   <div className="space-y-2 flex-1">
+                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Fecha
+                    </label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={e => setDate(e.target.value)}
+                      max={todayISO()}
+                      className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+
+                {/* Categoría + Forma de pago */}
+                <div className="flex gap-4">
+                  <div className="space-y-2 flex-1">
                     <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Categoría</label>
                     <select
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
+                      value={categoryId}
+                      onChange={e => setCategoryId(e.target.value)}
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                     >
-                      {CATEGORIES.map(c => (
-                        <option key={c.name} value={c.name}>{c.name}</option>
+                      <option value="">Sin categoría</option>
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2 flex-1">
+                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Pago</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={e => setPaymentMethod(e.target.value)}
+                      className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                    >
+                      {PAY_METHODS.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Forma de pago</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={e => setPaymentMethod(e.target.value)}
-                    className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                  >
-                    {PAY_METHODS.map(m => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-
+                {/* Cuenta */}
                 {accounts.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Cuenta</label>

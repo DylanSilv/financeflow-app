@@ -19,7 +19,9 @@ interface State {
 
 interface UseSavingsData extends State {
   refetch:    () => void;
-  addFunds:   (id: string, amount: number) => Promise<void>;
+  updateGoal: (id: string, data: { name?: string; targetAmount?: number; deadline?: string | null; color?: string }) => Promise<void>;
+  addFunds:   (id: string, amount: number, accountId?: string) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
 }
 
 export function useSavingsData(): UseSavingsData {
@@ -37,13 +39,29 @@ export function useSavingsData(): UseSavingsData {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const addFunds = useCallback(async (id: string, amount: number) => {
-    const { data } = await api.patch<SavingsGoal>(`/savings/${id}/funds`, { amount });
+  const updateGoal = useCallback(async (id: string, data: { name?: string; targetAmount?: number; deadline?: string | null; color?: string }) => {
+    const { data: updated } = await api.patch<SavingsGoal>(`/savings/${id}`, data);
+    setState(prev => ({
+      ...prev,
+      goals: prev.goals.map(g => g.id === id ? updated : g),
+    }));
+  }, []);
+
+  const addFunds = useCallback(async (id: string, amount: number, accountId?: string) => {
+    const { data } = await api.patch<SavingsGoal>(`/savings/${id}/funds`, { amount, accountId });
     setState(prev => ({
       ...prev,
       goals: prev.goals.map(g => g.id === id ? data : g),
     }));
   }, []);
 
-  return { ...state, refetch: fetchAll, addFunds };
+  const deleteGoal = useCallback(async (id: string) => {
+    await api.delete(`/savings/${id}`);
+    setState(prev => ({
+      ...prev,
+      goals: prev.goals.filter(g => g.id !== id),
+    }));
+  }, []);
+
+  return { ...state, refetch: fetchAll, updateGoal, addFunds, deleteGoal };
 }

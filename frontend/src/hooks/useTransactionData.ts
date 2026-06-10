@@ -8,52 +8,82 @@ export interface Transaction {
   date:          string;
   type:          'INCOME' | 'EXPENSE';
   paymentMethod: string;
-  category?:     { name: string; color: string } | null;
+  category?:     { id: string; name: string; color: string } | null;
+  accountId?:    string | null;
 }
 
 interface State {
   transactions: Transaction[];
   loading:      boolean;
   error:        string | null;
+  hasMore:      boolean;
 }
 
 interface UseTransactionData extends State {
   refetch:           () => void;
+  loadMore:          () => void;
   deleteTransaction: (id: string) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Pick<Transaction, 'title' | 'amount' | 'date' | 'type' | 'paymentMethod'>> & { categoryName?: string; categoryColor?: string }) => Promise<void>;
 }
 
+const TAKE = 50;
+
 export function useTransactionData(
-  filters: { type?: string; search?: string } = {},
+  filters: { search?: string; dateFrom?: string; dateTo?: string } = {},
 ): UseTransactionData {
-  const [state, setState] = useState<State>({
-    transactions: [],
-    loading:      true,
-    error:        null,
-  });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [hasMore,      setHasMore]      = useState(false);
+  const [currentSkip,  setCurrentSkip]  = useState(0);
 
-  const fetchAll = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
+  const buildParams = useCallback((skip: number): Record<string, string> => {
+    const p: Record<string, string> = { take: String(TAKE), skip: String(skip) };
+    if (filters.search)   p['search']   = filters.search;
+    if (filters.dateFrom) p['dateFrom'] = filters.dateFrom;
+    if (filters.dateTo)   p['dateTo']   = filters.dateTo;
+    return p;
+  }, [filters.search, filters.dateFrom, filters.dateTo]);
+
+  const doFetch = useCallback(async (skip: number, replace: boolean) => {
+    setLoading(true);
+    setError(null);
     try {
-      const params: Record<string, string> = { take: '200' };
-      if (filters.type && filters.type !== 'ALL') params['type'] = filters.type;
-      if (filters.search) params['search'] = filters.search;
-
-      const { data } = await api.get<Transaction[]>('/transactions', { params });
-      setState({ transactions: data, loading: false, error: null });
+      const { data } = await api.get<Transaction[]>('/transactions', { params: buildParams(skip) });
+      setTransactions(prev => replace ? data : [...prev, ...data]);
+      setHasMore(data.length === TAKE);
     } catch {
-      setState(prev => ({ ...prev, loading: false, error: 'Error al cargar movimientos.' }));
+      setError('Error al cargar movimientos.');
+    } finally {
+      setLoading(false);
     }
-  }, [filters.type, filters.search]);
+  }, [buildParams]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    setCurrentSkip(0);
+    doFetch(0, true);
+  }, [doFetch]);
+
+  const refetch = useCallback(() => {
+    setCurrentSkip(0);
+    doFetch(0, true);
+  }, [doFetch]);
+
+  const loadMore = useCallback(() => {
+    const next = currentSkip + TAKE;
+    setCurrentSkip(next);
+    doFetch(next, false);
+  }, [currentSkip, doFetch]);
 
   const deleteTransaction = useCallback(async (id: string) => {
     await api.delete(`/transactions/${id}`);
-    setState(prev => ({
-      ...prev,
-      transactions: prev.transactions.filter(t => t.id !== id),
-    }));
+    setTransactions(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  return { ...state, refetch: fetchAll, deleteTransaction };
+  const updateTransaction = useCallback(async (id: string, updates: Parameters<UseTransactionData['updateTransaction']>[1]) => {
+    const { data } = await api.patch<Transaction>(`/transactions/${id}`, updates);
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+  }, []);
+
+  return { transactions, loading, error, hasMore, refetch, loadMore, deleteTransaction, updateTransaction };
 }

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 export function useAnimatedNumber(target: number, duration = 800): number {
   const [value, setValue] = useState(0);
   const startRef   = useRef<number | null>(null);
-  const rafRef     = useRef<number>();
+  const rafRef     = useRef<number>(0);
   const prevTarget = useRef(0);
 
   useEffect(() => {
@@ -22,7 +22,10 @@ export function useAnimatedNumber(target: number, duration = 800): number {
     };
 
     rafRef.current = requestAnimationFrame(animate);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      prevTarget.current = from; // reset so StrictMode re-run animates correctly
+    };
   }, [target, duration]);
 
   return value;

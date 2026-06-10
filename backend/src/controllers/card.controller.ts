@@ -13,24 +13,45 @@ export const getCards = async (req: AuthRequest, res: Response) => {
     include: {
       account: {
         include: {
-          transactions: { select: { amount: true, type: true } },
-          transfersFrom: { select: { amount: true } },
-          transfersTo:   { select: { amount: true } },
+          transfersFrom: { where: { userId }, select: { amount: true } },
+          transfersTo:   { where: { userId }, select: { amount: true } },
         },
       },
     },
   });
 
+  // Saldos de cuentas vinculadas a tarjetas de débito — groupBy en lugar de cargar todas las transacciones
+  const debitAccountIds = cards
+    .filter(c => c.type === 'DEBIT' && c.accountId)
+    .map(c => c.accountId!);
+
+  const txSumsRows = debitAccountIds.length > 0
+    ? await prisma.transaction.groupBy({
+        by:    ['accountId', 'type'],
+        where: { userId, accountId: { in: debitAccountIds } },
+        _sum:  { amount: true },
+      })
+    : [];
+
+  const txSumMap = new Map<string, { income: number; expenses: number }>();
+  for (const r of txSumsRows) {
+    const id = r.accountId!;
+    if (!txSumMap.has(id)) txSumMap.set(id, { income: 0, expenses: 0 });
+    const e = txSumMap.get(id)!;
+    if (r.type === 'INCOME')  e.income   = N(r._sum.amount);
+    if (r.type === 'EXPENSE') e.expenses = N(r._sum.amount);
+  }
+
   return res.json(
     cards.map(c => {
-      let balance = N(c.balanceUsed);
+      const balanceUsed = N(c.balanceUsed);
+      let balance = balanceUsed;
 
-      if (c.account) {
-        const income      = c.account.transactions.filter(t => t.type === 'INCOME' ).reduce((s, t) => s + N(t.amount), 0);
-        const expenses    = c.account.transactions.filter(t => t.type === 'EXPENSE').reduce((s, t) => s + N(t.amount), 0);
+      if (c.type === 'DEBIT' && c.account) {
+        const sums        = txSumMap.get(c.accountId!) ?? { income: 0, expenses: 0 };
         const transferIn  = c.account.transfersTo.reduce(  (s, t) => s + N(t.amount), 0);
         const transferOut = c.account.transfersFrom.reduce((s, t) => s + N(t.amount), 0);
-        balance = N(c.account.initialBalance) + income - expenses + transferIn - transferOut;
+        balance = N(c.account.initialBalance) + sums.income - sums.expenses + transferIn - transferOut;
       }
 
       return {
@@ -42,6 +63,7 @@ export const getCards = async (req: AuthRequest, res: Response) => {
         color:          c.color ?? 'from-zinc-900 to-zinc-700',
         limit:          N(c.limit),
         balance,
+        balanceUsed,
         accountId:      c.accountId ?? null,
       };
     }),

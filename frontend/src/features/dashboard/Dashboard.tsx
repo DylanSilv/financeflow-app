@@ -5,11 +5,13 @@ import {
 } from 'recharts';
 import {
   ArrowUpRight, ArrowDownRight, Wallet, TrendingUp,
-  RefreshCw, Target, CreditCard, Building2,
+  RefreshCw, Target, CreditCard, Building2, ArrowRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useDashboardData, AccountBalance, ActiveLoan, SavingsGoal } from '@/hooks/useDashboardData';
+import { useState, useEffect, useRef } from 'react';
+import { useDashboardData, AccountBalance, ActiveLoan, SavingsGoal, CategoryExpense } from '@/hooks/useDashboardData';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
+import { api } from '@/lib/axios';
 
 // ─── Formatting ──────────────────────────────────────────────
 
@@ -205,10 +207,39 @@ const ChartTooltip = ({ active, payload, label }: any) => {
 
 export default function Dashboard() {
   const {
-    balanceTotal, balanceCuentas, gastosCategorias,
+    balanceTotal, balanceCuentas,
     evolucion, prestamos, ahorros,
     loading, error, refetch,
   } = useDashboardData();
+
+  // AutoPay — se ejecuta una sola vez por sesión al montar el Dashboard
+  const autoPayRan = useRef(false);
+  const [autoPayResult, setAutoPayResult] = useState<{ name: string; amount: number }[] | null>(null);
+
+  useEffect(() => {
+    if (autoPayRan.current) return;
+    autoPayRan.current = true;
+    api.post<{ paid: { id: string; name: string; amount: number }[]; count: number }>('/fixed-expenses/autopay')
+      .then(r => { if (r.data.count > 0) { setAutoPayResult(r.data.paid); refetch(); } })
+      .catch(() => {});
+  }, [refetch]);
+
+  // Gastos por categoría — gestionado localmente para soportar toggle mes/histórico
+  const [catPeriod, setCatPeriod] = useState<'month' | 'all'>('month');
+  const [gastosCategorias, setGastosCategorias] = useState<{ categories: CategoryExpense[]; total: number } | null>(null);
+  const [catLoading, setCatLoading] = useState(true);
+
+  useEffect(() => {
+    setCatLoading(true);
+    const now    = new Date();
+    const params = catPeriod === 'month'
+      ? `?year=${now.getFullYear()}&month=${now.getMonth() + 1}`
+      : '';
+    api.get(`/dashboard/gastos-categoria${params}`)
+      .then(r => setGastosCategorias(r.data))
+      .catch(() => {})
+      .finally(() => setCatLoading(false));
+  }, [catPeriod]);
 
   // Current-month metrics come from balanceTotal
   const mIncome   = balanceTotal?.monthIncome   ?? 0;
@@ -233,8 +264,68 @@ export default function Dashboard() {
     { name: 'Otros', color: '#71717a', total: cats.slice(6).reduce((s, c) => s + c.total, 0), percentage: 0 },
   ];
 
+  // Onboarding: usuario sin cuentas
+  const isNewUser = !loading && balanceCuentas !== null && balanceCuentas.length === 0;
+  if (isNewUser) {
+    return (
+      <div className="flex flex-col gap-6 max-w-xl mx-auto pt-8">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-2xl text-white mx-auto mb-4 shadow-lg shadow-indigo-500/20">
+            F
+          </div>
+          <h1 className="text-2xl font-bold text-white">¡Bienvenido a FinanceFlow!</h1>
+          <p className="text-zinc-400 mt-2 text-sm">Tu panel financiero personal. Para empezar, completá estos pasos.</p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {[
+            { step: 1, label: 'Agregá tus tarjetas', desc: 'Vinculá tus tarjetas de débito y crédito para ver tus saldos.', href: '/cards' },
+            { step: 2, label: 'Registrá un movimiento', desc: 'Anotá ingresos y gastos para llevar el control de tu dinero.', href: '/transactions' },
+            { step: 3, label: 'Configurá gastos fijos', desc: 'Cargá tus pagos recurrentes (alquiler, servicios, suscripciones).', href: '/fixed-expenses' },
+          ].map(({ step, label, desc, href }) => (
+            <motion.a key={step} href={href}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: step * 0.1, duration: 0.3 }}
+              className="flex items-center gap-4 p-4 bg-[#111111] border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all group"
+            >
+              <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-400 flex-shrink-0">
+                {step}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white">{label}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-300 transition-colors flex-shrink-0" />
+            </motion.a>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
+
+      {/* ── Banner AutoPay ── */}
+      {autoPayResult && autoPayResult.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-5 py-4 flex items-start justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <RefreshCw className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-300">
+                AutoPay procesó {autoPayResult.length} gasto{autoPayResult.length !== 1 ? 's' : ''} fijo{autoPayResult.length !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-emerald-500 mt-0.5">
+                {autoPayResult.map(e => `${e.name} ($${e.amount.toLocaleString('es-UY', { minimumFractionDigits: 2 })})`).join(' · ')}
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setAutoPayResult(null)} className="text-emerald-600 hover:text-emerald-400 transition-colors flex-shrink-0 text-lg leading-none">×</button>
+        </motion.div>
+      )}
 
       {/* ── Header ── */}
       <header className="flex justify-between items-end">
@@ -331,10 +422,31 @@ export default function Dashboard() {
 
         {/* Gastos por Categoría */}
         <div className="bg-[#111111] border border-zinc-800 p-6 rounded-xl">
-          <h3 className="text-lg font-medium text-white mb-1">Gastos por Categoría</h3>
-          <p className="text-xs text-zinc-500 mb-5">Distribución del total histórico</p>
+          <div className="flex justify-between items-start mb-5">
+            <div>
+              <h3 className="text-lg font-medium text-white mb-1">Gastos por Categoría</h3>
+              <p className="text-xs text-zinc-500">
+                {catPeriod === 'month' ? 'Mes actual' : 'Total histórico'}
+              </p>
+            </div>
+            <div className="flex bg-[#0a0a0a] p-1 rounded-lg border border-zinc-800 text-xs">
+              {(['month', 'all'] as const).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setCatPeriod(p)}
+                  className={`px-3 py-1 rounded-md transition-all font-medium ${
+                    catPeriod === p
+                      ? 'bg-[#1a1a1a] text-white border border-zinc-700'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {p === 'month' ? 'Mes' : 'Histórico'}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {loading ? (
+          {catLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => <Skeleton key={i} h="h-6" />)}
             </div>

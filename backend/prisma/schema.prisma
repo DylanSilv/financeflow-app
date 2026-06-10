@@ -3,7 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── USER ────────────────────────────────────────────────────
@@ -192,13 +194,14 @@ enum PaymentMethod {
 
 model FixedExpense {
   id      String        @id @default(uuid())
-  name    String
-  amount  Decimal       @db.Decimal(10, 2)
-  dueDate Int
-  autoPay Boolean       @default(false)
-  status  ExpenseStatus @default(PENDING)
-  userId  String
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  amount     Decimal       @db.Decimal(10, 2)
+  dueDate    Int
+  autoPay    Boolean       @default(false)
+  status     ExpenseStatus @default(PENDING)
+  lastPaidAt DateTime?
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   accountId String?
   account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)

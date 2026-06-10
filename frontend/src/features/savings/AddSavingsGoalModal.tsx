@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target } from 'lucide-react';
 import { api } from '@/lib/axios';
+import { Toggle } from '@/components/ui/Toggle';
 
 interface Props {
   isOpen:     boolean;
@@ -31,10 +32,22 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    setError(null);
+
+    if (!name.trim()) { setError('El nombre de la meta es obligatorio.'); return; }
+    if (currentAmount && parseFloat(currentAmount) < 0) {
+      setError('El monto actual no puede ser negativo.'); return;
+    }
+    if (hasTarget) {
+      if (!targetAmount || parseFloat(targetAmount) <= 0) {
+        setError('El monto objetivo debe ser mayor a $0.'); return;
+      }
+      if (currentAmount && parseFloat(currentAmount) > parseFloat(targetAmount)) {
+        setError('El monto ya ahorrado no puede superar el objetivo.'); return;
+      }
+    }
 
     setLoading(true);
-    setError(null);
     try {
       await api.post('/savings', {
         name,
@@ -110,22 +123,12 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </div>
 
                 {/* Toggle objetivo */}
-                <div
-                  onClick={() => setHasTarget(!hasTarget)}
-                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
-                    hasTarget
-                      ? 'bg-emerald-500/10 border-emerald-500/30'
-                      : 'bg-[#161616] border-zinc-800 hover:border-zinc-700'
-                  }`}
-                >
-                  <div>
-                    <p className="text-sm font-medium text-white">Tengo un objetivo en mente</p>
-                    <p className="text-xs text-zinc-500">Definir monto y fecha límite</p>
-                  </div>
-                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasTarget ? 'bg-emerald-500' : 'bg-zinc-700'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasTarget ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </div>
-                </div>
+                <Toggle
+                  checked={hasTarget}
+                  onChange={setHasTarget}
+                  label="Tengo un objetivo en mente"
+                  sublabel="Definir monto y fecha límite"
+                />
 
                 <AnimatePresence>
                   {hasTarget && (

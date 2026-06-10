@@ -49,10 +49,16 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !lastFour || !selectedBank) return;
+    setError(null);
+
+    if (!selectedBank) { setError('Seleccioná el banco emisor de la tarjeta.'); return; }
+    if (!name.trim())  { setError('El nombre de la tarjeta es obligatorio.'); return; }
+    if (lastFour.length !== 4) { setError('Ingresá exactamente los últimos 4 dígitos.'); return; }
+    if (type === 'CREDIT' && (!limit || parseFloat(limit) <= 0)) {
+      setError('El límite de crédito debe ser mayor a $0.'); return;
+    }
 
     setLoading(true);
-    setError(null);
     try {
       await api.post('/cards', {
         name,

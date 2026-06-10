@@ -6,8 +6,7 @@ config();
 
 export default defineConfig({
   datasource: {
-    url: process.env.DATABASE_URL,
-    // Root solo para shadow DB en migraciones locales — el app user nunca usa root
-    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
+    url:       process.env.DATABASE_URL,   // pooler URL (pgBouncer) — para la app
+    directUrl: process.env.DIRECT_URL,    // direct URL — solo para migraciones
   },
 });

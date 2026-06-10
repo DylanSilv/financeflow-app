@@ -1,8 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Plus, CheckCircle2, Clock, RefreshCw, Trash2, ChevronRight, CreditCard, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, CheckCircle2, Clock, RefreshCw, Trash2, ChevronRight, CreditCard, X, Pencil } from 'lucide-react';
 import { useFixedExpenseData, FixedExpense } from '@/hooks/useFixedExpenseData';
 import { AddFixedExpenseModal } from './AddFixedExpenseModal';
+import { EditFixedExpenseModal } from './EditFixedExpenseModal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/axios';
+
+const fadeUp = (delay = 0) => ({
+  initial:    { opacity: 0, y: 16 },
+  animate:    { opacity: 1, y: 0 },
+  transition: { duration: 0.35, delay, ease: [0.16, 1, 0.3, 1] as const },
+});
 
 interface CardOption {
   id:        string;
@@ -25,19 +35,24 @@ function useCards() {
 function ExpenseRow({
   expense,
   cards,
+  index,
   onPay,
-  onToggleAutoPay,
-  onDelete,
+  onToggleAutoPay: _onToggleAutoPay,
+  onRequestEdit,
+  onRequestDelete,
 }: {
-  expense:         FixedExpense;
-  cards:           CardOption[];
-  onPay:           (id: string, accountId?: string) => Promise<void>;
-  onToggleAutoPay: (id: string) => Promise<void>;
-  onDelete:        (id: string) => Promise<void>;
+  expense:          FixedExpense;
+  cards:            CardOption[];
+  index:            number;
+  onPay:            (id: string, accountId?: string) => Promise<void>;
+  onToggleAutoPay:  (id: string) => Promise<void>;
+  onRequestEdit:    (expense: FixedExpense) => void;
+  onRequestDelete:  (id: string) => void;
 }) {
   const [showPay,      setShowPay]      = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardOption | null>(null);
   const [paying,       setPaying]       = useState(false);
+  const [payError,     setPayError]     = useState<string | null>(null);
 
   const isPaid    = expense.status === 'PAID';
   const isOverdue = expense.status === 'OVERDUE';
@@ -45,7 +60,6 @@ function ExpenseRow({
   const pct       = hasCuotas
     ? Math.round((expense.paidInstallments! / expense.totalInstallments!) * 100) : 0;
 
-  // Al abrir el selector, preseleccionar primera tarjeta con cuenta vinculada
   const handleOpenPay = () => {
     const first = cards.find(c => c.accountId) ?? cards[0] ?? null;
     setSelectedCard(first);
@@ -54,16 +68,24 @@ function ExpenseRow({
 
   const handleConfirm = async () => {
     setPaying(true);
+    setPayError(null);
     try {
       await onPay(expense.id, selectedCard?.accountId ?? undefined);
       setShowPay(false);
+    } catch {
+      setPayError('No se pudo registrar el pago. Intentá de nuevo.');
     } finally {
       setPaying(false);
     }
   };
 
   return (
-    <div className={`transition-colors group ${isPaid ? 'hover:bg-zinc-800/20' : 'hover:bg-zinc-800/30'}`}>
+    <motion.div
+      initial={{ opacity: 0, x: -12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.24) }}
+      className={`transition-colors group ${isPaid ? 'hover:bg-zinc-800/20' : 'hover:bg-zinc-800/30'}`}
+    >
       {/* Fila principal */}
       <div className="flex items-center gap-4 px-4 py-3.5">
         {/* Indicador de estado */}
@@ -105,9 +127,14 @@ function ExpenseRow({
           )}
         </div>
 
-        {/* Día de vencimiento */}
-        <div className="hidden sm:block flex-shrink-0 w-16 text-center">
+        {/* Día de vencimiento + último pago */}
+        <div className="hidden sm:block flex-shrink-0 w-24 text-center">
           <span className="text-xs text-zinc-500">día {expense.dueDate}</span>
+          {expense.lastPaidAt && (
+            <p className="text-[10px] text-zinc-600 mt-0.5">
+              Últ. {new Date(expense.lastPaidAt).toLocaleDateString('es-UY', { day: 'numeric', month: 'short' })}
+            </p>
+          )}
         </div>
 
         {/* Monto */}
@@ -120,144 +147,183 @@ function ExpenseRow({
         </div>
 
         {/* Acciones */}
-        <div className="flex-shrink-0 flex items-center gap-1 w-28 justify-end">
+        <div className="flex-shrink-0 flex items-center justify-end gap-1 w-36">
+          {/* Iconos editar/borrar: aparecen en hover sin empujar el botón Pagar */}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+              onClick={() => onRequestEdit(expense)} aria-label="Editar cuenta fija"
+              className="p-1.5 text-zinc-700 hover:text-indigo-400 transition-all rounded-lg hover:bg-indigo-400/10"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+              onClick={() => onRequestDelete(expense.id)} aria-label="Eliminar cuenta fija"
+              className="p-1.5 text-zinc-700 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </motion.button>
+          </div>
+
           {isPaid ? (
-            <span className="text-xs text-emerald-500/80 font-medium">✓ pagado</span>
+            <span className="text-xs text-emerald-500/80 font-medium whitespace-nowrap">✓ pagado</span>
           ) : (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               onClick={handleOpenPay}
-              className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+              className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
             >
               Pagar <ChevronRight className="w-3 h-3" />
-            </button>
+            </motion.button>
           )}
-          <button
-            onClick={() => onDelete(expense.id)}
-            className="p-1.5 text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-400/10"
-            title="Eliminar"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
-      {/* Mini menú de selección de tarjeta */}
-      {showPay && (
-        <div className="mx-4 mb-3 bg-[#0f0f0f] border border-zinc-700 rounded-xl p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm font-medium text-white">
-                Pagar <span className="text-indigo-400">${expense.amount.toLocaleString('es-UY', { minimumFractionDigits: 2 })}</span> desde...
-              </span>
-            </div>
-            <button onClick={() => setShowPay(false)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Selector de tarjetas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {cards.map(card => (
-              <button
-                key={card.id}
-                onClick={() => setSelectedCard(card)}
-                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                  selectedCard?.id === card.id
-                    ? 'border-indigo-500 bg-indigo-500/10'
-                    : 'border-zinc-800 hover:border-zinc-600 bg-[#161616]'
-                }`}
-              >
-                {/* Chip de color de la tarjeta */}
-                <div className={`w-8 h-6 rounded-md bg-gradient-to-br ${card.color} flex-shrink-0`} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-zinc-200 truncate">{card.name}</p>
-                  <p className={`text-xs font-semibold tabular-nums ${
-                    card.balance < expense.amount ? 'text-red-400' : 'text-emerald-400'
-                  }`}>
-                    ${card.balance.toLocaleString('es-UY', { minimumFractionDigits: 2 })}
-                  </p>
+      {/* Panel de pago con animación */}
+      <AnimatePresence>
+        {showPay && (
+          <motion.div
+            key="pay-panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mx-4 mb-3 bg-[#0f0f0f] border border-zinc-700 rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-indigo-400" />
+                  <span className="text-sm font-medium text-white">
+                    Pagar <span className="text-indigo-400">${expense.amount.toLocaleString('es-UY', { minimumFractionDigits: 2 })}</span> desde...
+                  </span>
                 </div>
-                {selectedCard?.id === card.id && (
-                  <div className="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0" />
-                )}
-              </button>
-            ))}
-
-            {/* Opción sin tarjeta */}
-            <button
-              onClick={() => setSelectedCard(null)}
-              className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                selectedCard === null && showPay
-                  ? 'border-zinc-600 bg-zinc-800/40'
-                  : 'border-zinc-800 hover:border-zinc-600 bg-[#161616]'
-              }`}
-            >
-              <div className="w-8 h-6 rounded-md bg-zinc-700 flex-shrink-0 flex items-center justify-center">
-                <span className="text-zinc-500 text-[9px]">—</span>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowPay(false)}
+                  className="text-zinc-600 hover:text-zinc-400 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </motion.button>
               </div>
-              <div>
-                <p className="text-xs font-medium text-zinc-400">Sin tarjeta</p>
-                <p className="text-[10px] text-zinc-600">Solo marca pagado</p>
-              </div>
-            </button>
-          </div>
 
-          {/* Saldo post-pago de la tarjeta seleccionada */}
-          {selectedCard && selectedCard.accountId && (
-            <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
-              selectedCard.balance - expense.amount < 0
-                ? 'bg-red-500/10 border border-red-500/20'
-                : 'bg-zinc-800/40 border border-zinc-700/50'
-            }`}>
-              <span className="text-zinc-400">Saldo después del pago</span>
-              <span className={`font-semibold tabular-nums ${
-                selectedCard.balance - expense.amount < 0 ? 'text-red-400' : 'text-zinc-200'
-              }`}>
-                ${(selectedCard.balance - expense.amount).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
-                {selectedCard.balance - expense.amount < 0 && ' ⚠'}
-              </span>
+              {/* Selector de tarjetas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {cards.map(card => (
+                  <motion.button
+                    key={card.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedCard(card)}
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                      selectedCard?.id === card.id
+                        ? 'border-indigo-500 bg-indigo-500/10'
+                        : 'border-zinc-800 hover:border-zinc-600 bg-[#161616]'
+                    }`}
+                  >
+                    <div className={`w-8 h-6 rounded-md bg-gradient-to-br ${card.color} flex-shrink-0`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-zinc-200 truncate">{card.name}</p>
+                      <p className={`text-xs font-semibold tabular-nums ${
+                        card.balance < expense.amount ? 'text-red-400' : 'text-emerald-400'
+                      }`}>
+                        ${card.balance.toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    {selectedCard?.id === card.id && (
+                      <div className="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0" />
+                    )}
+                  </motion.button>
+                ))}
+
+                {/* Opción sin tarjeta */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedCard(null)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    selectedCard === null && showPay
+                      ? 'border-zinc-600 bg-zinc-800/40'
+                      : 'border-zinc-800 hover:border-zinc-600 bg-[#161616]'
+                  }`}
+                >
+                  <div className="w-8 h-6 rounded-md bg-zinc-700 flex-shrink-0 flex items-center justify-center">
+                    <span className="text-zinc-500 text-[9px]">—</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-zinc-400">Sin tarjeta</p>
+                    <p className="text-[10px] text-zinc-600">Solo marca pagado</p>
+                  </div>
+                </motion.button>
+              </div>
+
+              {/* Saldo post-pago */}
+              {selectedCard && selectedCard.accountId && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
+                    selectedCard.balance - expense.amount < 0
+                      ? 'bg-red-500/10 border border-red-500/20'
+                      : 'bg-zinc-800/40 border border-zinc-700/50'
+                  }`}
+                >
+                  <span className="text-zinc-400">Saldo después del pago</span>
+                  <span className={`font-semibold tabular-nums ${
+                    selectedCard.balance - expense.amount < 0 ? 'text-red-400' : 'text-zinc-200'
+                  }`}>
+                    ${(selectedCard.balance - expense.amount).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+                    {selectedCard.balance - expense.amount < 0 && ' ⚠'}
+                  </span>
+                </motion.div>
+              )}
+
+              {/* Error de pago */}
+              {payError && (
+                <p className="text-xs text-red-400 px-1">{payError}</p>
+              )}
+
+              {/* Confirmar */}
+              <div className="flex gap-2 pt-1">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleConfirm}
+                  disabled={paying}
+                  className="flex-1 bg-white text-black font-semibold py-2 rounded-lg text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                >
+                  {paying ? 'Registrando...' : `Confirmar pago${selectedCard ? ` — ${selectedCard.name}` : ''}`}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowPay(false)}
+                  className="px-4 py-2 bg-zinc-800 text-zinc-400 rounded-lg text-sm hover:bg-zinc-700 transition-colors"
+                >
+                  Cancelar
+                </motion.button>
+              </div>
             </div>
-          )}
-
-          {/* Confirmar */}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleConfirm}
-              disabled={paying}
-              className="flex-1 bg-white text-black font-semibold py-2 rounded-lg text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50"
-            >
-              {paying ? 'Registrando...' : `Confirmar pago${ selectedCard ? ` — ${selectedCard.name}` : ''}`}
-            </button>
-            <button
-              onClick={() => setShowPay(false)}
-              className="px-4 py-2 bg-zinc-800 text-zinc-400 rounded-lg text-sm hover:bg-zinc-700 transition-colors"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
 // ─── Página principal ─────────────────────────────────────────
 
 export const FixedExpenses = () => {
-  const { expenses, loading, markAsPaid, toggleAutoPay, deleteExpense, refetch } = useFixedExpenseData();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { expenses, loading, updateExpense, markAsPaid, toggleAutoPay, deleteExpense, refetch } = useFixedExpenseData();
+  const [isModalOpen,   setIsModalOpen]   = useState(false);
+  const [editTarget,    setEditTarget]    = useState<FixedExpense | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const cards = useCards();
 
-  // onPay con accountId opcional
   const handlePay = async (id: string, accountId?: string) => {
-    if (accountId) {
-      // Llamar directamente al API con accountId
-      await api.patch(`/fixed-expenses/${id}/pay`, { accountId });
-      refetch();
-    } else {
-      await markAsPaid(id);
-    }
+    await api.patch(`/fixed-expenses/${id}/pay`, accountId ? { accountId } : {});
+    refetch();
   };
 
   const pending = expenses.filter(e => e.status !== 'PAID').sort((a, b) => a.dueDate - b.dueDate);
@@ -271,21 +337,23 @@ export const FixedExpenses = () => {
     <div className="flex flex-col gap-6">
 
       {/* Header */}
-      <header className="flex justify-between items-end">
+      <motion.header {...fadeUp()} className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Cuentas Fijas</h1>
           <p className="text-zinc-400 mt-1">Seguimiento de tus pagos recurrentes del mes.</p>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           onClick={() => setIsModalOpen(true)}
           className="bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
         >
-          <Plus className="w-4 h-4" /> Nueva Cuenta
-        </button>
-      </header>
+          <Plus className="w-4 h-4" /> Nueva Cuenta Fija
+        </motion.button>
+      </motion.header>
 
       {/* Resumen del mes */}
-      <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-5">
+      <motion.div {...fadeUp(0.1)} className="bg-[#111111] border border-zinc-800 rounded-2xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
           <div>
             <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Progreso del mes</p>
@@ -304,30 +372,42 @@ export const FixedExpenses = () => {
           </div>
         </div>
         <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-indigo-500 to-emerald-500"
-            style={{ width: `${paidPct}%` }}
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${paidPct}%` }}
+            transition={{ duration: 0.9, delay: 0.2, ease: 'easeOut' }}
           />
         </div>
         <div className="flex justify-between mt-2">
           <span className="text-xs text-zinc-600">{paid.length} pagadas</span>
           <span className="text-xs text-zinc-600">{pending.length} pendientes</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* Lista */}
       {loading ? (
-        <div className="text-center text-zinc-500 py-12">Cargando cuentas fijas...</div>
-      ) : (
         <div className="bg-[#111111] border border-zinc-800 rounded-2xl overflow-hidden">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3.5 border-b border-zinc-800/30">
+              <Skeleton className="h-3 w-3 rounded-full flex-shrink-0" />
+              <Skeleton className="h-4 flex-1" />
+              <Skeleton className="h-3 w-16 hidden sm:block" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-24 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div {...fadeUp(0.15)} className="bg-[#111111] border border-zinc-800 rounded-2xl overflow-hidden">
 
           {/* Columnas header */}
           <div className="hidden sm:flex items-center gap-4 px-4 py-2.5 border-b border-zinc-800/60 bg-[#0f0f0f]">
             <div className="w-5" />
             <div className="flex-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Servicio</div>
-            <div className="w-16 text-center text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Vence</div>
+            <div className="w-24 text-center text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Vence</div>
             <div className="w-24 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Monto</div>
-            <div className="w-28 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Estado</div>
+            <div className="w-36 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Estado</div>
           </div>
 
           {/* Sección pendientes */}
@@ -348,12 +428,13 @@ export const FixedExpenses = () => {
                 </span>
               </div>
               <div className="divide-y divide-zinc-800/30">
-                {pending.map(e => (
+                {pending.map((e, i) => (
                   <ExpenseRow
-                    key={e.id} expense={e} cards={cards}
+                    key={e.id} expense={e} cards={cards} index={i}
                     onPay={handlePay}
                     onToggleAutoPay={toggleAutoPay}
-                    onDelete={deleteExpense}
+                    onRequestEdit={setEditTarget}
+                    onRequestDelete={setPendingDelete}
                   />
                 ))}
               </div>
@@ -366,24 +447,21 @@ export const FixedExpenses = () => {
               <div className="flex items-center justify-between px-4 py-2 bg-emerald-500/5 border-b border-zinc-800/40">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/70" />
-                  <span className="text-xs font-semibold text-emerald-500/80 uppercase tracking-widest">
-                    Pagadas
-                  </span>
-                  <span className="text-xs bg-emerald-500/10 text-emerald-500/70 px-1.5 py-0.5 rounded-full">
-                    {paid.length}
-                  </span>
+                  <span className="text-xs font-semibold text-emerald-500/80 uppercase tracking-widest">Pagadas</span>
+                  <span className="text-xs bg-emerald-500/10 text-emerald-500/70 px-1.5 py-0.5 rounded-full">{paid.length}</span>
                 </div>
                 <span className="text-xs text-zinc-500 font-medium">
                   ${totalPaid.toLocaleString('es-UY', { minimumFractionDigits: 0 })}
                 </span>
               </div>
               <div className="divide-y divide-zinc-800/20">
-                {paid.map(e => (
+                {paid.map((e, i) => (
                   <ExpenseRow
-                    key={e.id} expense={e} cards={cards}
+                    key={e.id} expense={e} cards={cards} index={i}
                     onPay={handlePay}
                     onToggleAutoPay={toggleAutoPay}
-                    onDelete={deleteExpense}
+                    onRequestEdit={setEditTarget}
+                    onRequestDelete={setPendingDelete}
                   />
                 ))}
               </div>
@@ -395,13 +473,24 @@ export const FixedExpenses = () => {
               <p className="text-sm">No hay cuentas fijas registradas.</p>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
-      <AddFixedExpenseModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={refetch}
+      <AddFixedExpenseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={refetch} />
+
+      <EditFixedExpenseModal
+        expense={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={updateExpense}
+      />
+
+      <ConfirmDialog
+        isOpen={!!pendingDelete}
+        title="¿Eliminar cuenta fija?"
+        description="Se eliminará el servicio y sus datos de cuotas asociados. Esta acción es irreversible."
+        confirmLabel="Eliminar"
+        onConfirm={() => { if (pendingDelete) deleteExpense(pendingDelete); setPendingDelete(null); }}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

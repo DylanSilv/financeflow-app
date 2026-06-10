@@ -7,7 +7,9 @@ export interface FixedExpense {
   amount:            number;
   dueDate:           number;
   autoPay:           boolean;
+  accountId:         string | null;
   status:            'PENDING' | 'PAID' | 'OVERDUE';
+  lastPaidAt:        string | null;
   loanId:            string | null;
   loanName:          string | null;
   paidInstallments:  number | null;
@@ -23,6 +25,7 @@ interface State {
 
 interface UseFixedExpenseData extends State {
   refetch:        () => void;
+  updateExpense:  (id: string, data: { name?: string; amount?: number; dueDate?: number; autoPay?: boolean; accountId?: string | null }) => Promise<void>;
   markAsPaid:     (id: string) => Promise<void>;
   toggleAutoPay:  (id: string) => Promise<void>;
   deleteExpense:  (id: string) => Promise<void>;
@@ -42,6 +45,14 @@ export function useFixedExpenseData(): UseFixedExpenseData {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const updateExpense = useCallback(async (id: string, data: { name?: string; amount?: number; dueDate?: number; autoPay?: boolean; accountId?: string | null }) => {
+    const { data: updated } = await api.patch<FixedExpense>(`/fixed-expenses/${id}`, data);
+    setState(prev => ({
+      ...prev,
+      expenses: prev.expenses.map(e => e.id === id ? { ...e, ...updated } : e),
+    }));
+  }, []);
 
   const markAsPaid = useCallback(async (id: string) => {
     const { data } = await api.patch<FixedExpense>(`/fixed-expenses/${id}/pay`);
@@ -67,5 +78,5 @@ export function useFixedExpenseData(): UseFixedExpenseData {
     }));
   }, []);
 
-  return { ...state, refetch: fetchAll, markAsPaid, toggleAutoPay, deleteExpense };
+  return { ...state, refetch: fetchAll, updateExpense, markAsPaid, toggleAutoPay, deleteExpense };
 }

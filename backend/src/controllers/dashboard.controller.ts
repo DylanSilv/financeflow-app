@@ -56,34 +56,59 @@ export const getBalancePorCuenta = async (req: AuthRequest, res: Response) => {
   const monthStart = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1);
   const monthEnd   = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59);
 
-  const accounts = await prisma.account.findMany({
-    where: { userId, isArchived: false },
-    include: {
-      transactions: { select: { amount: true, type: true, date: true } },
-      transfersFrom: { select: { amount: true } },
-      transfersTo:   { select: { amount: true } },
-    },
-    orderBy: { name: 'asc' },
-  });
+  // 3 queries en paralelo en vez de N queries por cuenta
+  const [accounts, txSumsAll, txSumsMonth] = await Promise.all([
+    prisma.account.findMany({
+      where:   { userId, isArchived: false },
+      include: {
+        transfersFrom: { where: { userId }, select: { amount: true } },
+        transfersTo:   { where: { userId }, select: { amount: true } },
+      },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.transaction.groupBy({
+      by:    ['accountId', 'type'],
+      where: { userId, accountId: { not: null } },
+      _sum:  { amount: true },
+    }),
+    prisma.transaction.groupBy({
+      by:    ['accountId', 'type'],
+      where: { userId, accountId: { not: null }, date: { gte: monthStart, lte: monthEnd } },
+      _sum:  { amount: true },
+    }),
+  ]);
+
+  // Mapas accountId → { INCOME, EXPENSE }
+  type TypeMap = Map<string, number>;
+  const buildMap = (rows: typeof txSumsAll) => {
+    const m = new Map<string, TypeMap>();
+    for (const r of rows) {
+      const id = r.accountId!;
+      if (!m.has(id)) m.set(id, new Map());
+      m.get(id)!.set(r.type, N(r._sum.amount));
+    }
+    return m;
+  };
+
+  const allMap   = buildMap(txSumsAll);
+  const monthMap = buildMap(txSumsMonth);
 
   const result = accounts.map(acc => {
-    const income       = acc.transactions.filter(t => t.type === 'INCOME' ).reduce((s, t) => s + N(t.amount), 0);
-    const expenses     = acc.transactions.filter(t => t.type === 'EXPENSE').reduce((s, t) => s + N(t.amount), 0);
+    const all   = allMap.get(acc.id);
+    const month = monthMap.get(acc.id);
+
+    const income       = all?.get('INCOME')  ?? 0;
+    const expenses     = all?.get('EXPENSE') ?? 0;
     const transfersIn  = acc.transfersTo.reduce(  (s, t) => s + N(t.amount), 0);
     const transfersOut = acc.transfersFrom.reduce((s, t) => s + N(t.amount), 0);
     const balance      = N(acc.initialBalance) + income - expenses + transfersIn - transfersOut;
 
-    // Para cuentas BENEFIT: detectar si ya se recibió el ingreso este mes
     let receivedThisMonth: boolean | null = null;
     let monthlyAmount: number | null = null;
     if (acc.type === 'BENEFIT') {
-      const thisMonthIncome = acc.transactions
-        .filter(t => t.type === 'INCOME' && new Date(t.date) >= monthStart && new Date(t.date) <= monthEnd)
-        .reduce((s, t) => s + N(t.amount), 0);
+      const thisMonthIncome = month?.get('INCOME') ?? 0;
       receivedThisMonth = thisMonthIncome > 0;
-      monthlyAmount     = thisMonthIncome > 0 ? thisMonthIncome : income > 0
-        ? Math.round(income / Math.max(1, new Set(acc.transactions.filter(t => t.type === 'INCOME').map(t => `${new Date(t.date).getUTCFullYear()}-${new Date(t.date).getUTCMonth()}`)).size))
-        : null;
+      monthlyAmount     = thisMonthIncome > 0 ? thisMonthIncome : null;
     }
 
     return {

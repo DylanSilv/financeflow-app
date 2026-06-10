@@ -1,10 +1,12 @@
-// backend/src/lib/prisma.ts
+// backend/src/lib/Prisma.ts
 import { PrismaClient } from '@prisma/client';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
+const pool    = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+const adapter = new PrismaPg(pool);
 
 export const prisma = new PrismaClient({ adapter });

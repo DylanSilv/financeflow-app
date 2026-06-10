@@ -9,7 +9,8 @@ export interface Card {
   lastFourDigits: string;
   color:          string;
   limit:          number;
-  balance:        number;
+  balance:        number;  // DEBIT: saldo disponible de la cuenta | CREDIT: deuda actual (balanceUsed)
+  balanceUsed:    number;
   accountId:      string | null;
 }
 

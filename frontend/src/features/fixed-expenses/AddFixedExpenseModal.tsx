@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CalendarDays, Hash } from 'lucide-react';
+import { X, CalendarDays, Hash, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/axios';
+import { Toggle } from '@/components/ui/Toggle';
+
+interface Account { id: string; name: string; type: string; }
 
 interface Props {
   isOpen:     boolean;
@@ -14,25 +17,51 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [amount,            setAmount]            = useState('');
   const [dueDate,           setDueDate]           = useState('1');
   const [autoPay,           setAutoPay]           = useState(false);
+  const [accountId,         setAccountId]         = useState('');
+  const [accounts,          setAccounts]          = useState<Account[]>([]);
   const [hasInstallments,   setHasInstallments]   = useState(false);
   const [totalInstallments, setTotalInstallments] = useState('');
   const [paidInstallments,  setPaidInstallments]  = useState('0');
   const [loading,           setLoading]           = useState(false);
   const [error,             setError]             = useState<string | null>(null);
 
+  useEffect(() => {
+    api.get<Account[]>('/accounts').then(r => {
+      setAccounts(r.data);
+      if (r.data.length > 0) setAccountId(r.data[0].id);
+    }).catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !amount || !dueDate) return;
-    if (hasInstallments && !totalInstallments) return;
+    setError(null);
+
+    if (!name.trim()) { setError('El nombre del servicio es obligatorio.'); return; }
+    if (!amount || parseFloat(amount) <= 0) { setError('El monto debe ser mayor a $0.'); return; }
+    const parsedDue = parseInt(dueDate, 10);
+    if (!dueDate || isNaN(parsedDue) || parsedDue < 1 || parsedDue > 31) {
+      setError('El día de vencimiento debe estar entre 1 y 31.'); return;
+    }
+    if (autoPay && !accountId) {
+      setError('Seleccioná una cuenta para el pago automático.'); return;
+    }
+    if (hasInstallments) {
+      if (!totalInstallments || parseInt(totalInstallments, 10) < 1) {
+        setError('El total de cuotas debe ser al menos 1.'); return;
+      }
+      if (parseInt(paidInstallments, 10) > parseInt(totalInstallments, 10)) {
+        setError('Las cuotas pagadas no pueden superar el total.'); return;
+      }
+    }
 
     setLoading(true);
-    setError(null);
     try {
       await api.post('/fixed-expenses', {
         name,
         amount:            parseFloat(amount),
         dueDate:           parseInt(dueDate, 10),
         autoPay,
+        accountId:         autoPay ? (accountId || null) : null,
         hasInstallments,
         totalInstallments: hasInstallments ? parseInt(totalInstallments, 10) : undefined,
         paidInstallments:  hasInstallments ? parseInt(paidInstallments,  10) : undefined,
@@ -124,25 +153,13 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </div>
 
                 {/* Toggle cuotas */}
-                <div
-                  onClick={() => setHasInstallments(!hasInstallments)}
-                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
-                    hasInstallments
-                      ? 'bg-indigo-500/10 border-indigo-500/30'
-                      : 'bg-[#161616] border-zinc-800 hover:border-zinc-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Hash className={`w-4 h-4 ${hasInstallments ? 'text-indigo-400' : 'text-zinc-500'}`} />
-                    <div>
-                      <p className="text-sm font-medium text-white">Pago en cuotas</p>
-                      <p className="text-xs text-zinc-500">Tiene un número fijo de cuotas</p>
-                    </div>
-                  </div>
-                  <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${hasInstallments ? 'bg-indigo-500' : 'bg-zinc-700'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasInstallments ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </div>
-                </div>
+                <Toggle
+                  checked={hasInstallments}
+                  onChange={setHasInstallments}
+                  label="Pago en cuotas"
+                  sublabel="Tiene un número fijo de cuotas"
+                  icon={<Hash className="w-4 h-4" />}
+                />
 
                 {/* Campos de cuotas (condicional) */}
                 <AnimatePresence>
@@ -194,19 +211,36 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </AnimatePresence>
 
                 {/* Auto-pago */}
-                <div className="flex items-center justify-between p-4 rounded-xl bg-[#161616] border border-zinc-800">
-                  <div>
-                    <p className="text-sm font-medium text-white">Pago Automático</p>
-                    <p className="text-xs text-zinc-500">Se debitará solo cada mes</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAutoPay(!autoPay)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoPay ? 'bg-indigo-500' : 'bg-zinc-700'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoPay ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
+                <Toggle
+                  checked={autoPay}
+                  onChange={setAutoPay}
+                  label="Pago Automático"
+                  sublabel="Se debitará solo cada mes"
+                  icon={<RefreshCw className="w-4 h-4" />}
+                />
+
+                {/* Cuenta de débito — solo visible con autoPay activo */}
+                <AnimatePresence>
+                  {autoPay && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Cuenta de débito</label>
+                        <select
+                          value={accountId} onChange={e => setAccountId(e.target.value)}
+                          className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                        >
+                          <option value="">Seleccioná una cuenta</option>
+                          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                        <p className="text-xs text-indigo-400">Se debitará automáticamente cuando abras la app.</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {error && <p className="text-red-400 text-xs">{error}</p>}
 

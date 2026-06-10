@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { api } from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -11,24 +11,35 @@ function getGreeting(name: string): string {
   return `${saludo}, ${first}!`;
 }
 
-const stagger = {
+const stagger: Variants = {
   hidden: {},
   show:   { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
 };
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 14 },
   show:   { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
 
 export const Login = () => {
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [error,    setError]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [welcome,  setWelcome]  = useState<string | null>(null);
+  const [email,          setEmail]          = useState('');
+  const [password,       setPassword]       = useState('');
+  const [error,          setError]          = useState('');
+  const [loading,        setLoading]        = useState(false);
+  const [welcome,        setWelcome]        = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const setAuth  = useAuthStore(s => s.setAuth);
   const navigate = useNavigate();
+
+  // Detectar si llegamos por sesión expirada
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === '1') {
+      setSessionExpired(true);
+      // Limpiar el parámetro de la URL sin recargar
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,8 +147,20 @@ export const Login = () => {
 
             <div className="space-y-4">
               <AnimatePresence>
+                {sessionExpired && (
+                  <motion.div
+                    key="session-expired"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-3 text-sm text-amber-400 bg-amber-950/40 border border-amber-800/50 rounded-md text-center overflow-hidden"
+                  >
+                    Tu sesión expiró. Iniciá sesión nuevamente.
+                  </motion.div>
+                )}
                 {error && (
                   <motion.div
+                    key="error"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
@@ -193,7 +216,7 @@ export const Login = () => {
 
               <motion.p variants={fadeUp} className="text-center text-sm text-zinc-500 pt-2">
                 ¿No tenés cuenta?{' '}
-                <a href="/register" className="text-white hover:underline">Registrate</a>
+                <Link to="/register" className="text-white hover:underline">Registrate</Link>
               </motion.p>
             </div>
           </motion.div>
