@@ -1,28 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { TrendingUp, Shield, Layers, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
 function getGreeting(name: string): string {
   const h = new Date().getHours();
   const saludo = h < 12 ? 'Buen día' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
-  const first  = name.split(' ')[0];
-  return `${saludo}, ${first}!`;
+  return `${saludo}, ${name.split(' ')[0]}!`;
 }
 
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+};
 const stagger: Variants = {
   hidden: {},
-  show:   { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+  show:   { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
-};
+
+const FEATURES = [
+  { icon: TrendingUp, title: 'Dashboard en tiempo real',   desc: 'Visualizá tu patrimonio, ingresos y gastos de un vistazo.' },
+  { icon: Layers,     title: 'Gestión multi-cuenta',       desc: 'Bancas, efectivo, tarjetas y préstamos en un solo lugar.' },
+  { icon: Shield,     title: 'Tus datos, solo tuyos',      desc: 'Cada usuario tiene su espacio financiero completamente aislado.' },
+];
 
 export const Login = () => {
   const [email,          setEmail]          = useState('');
   const [password,       setPassword]       = useState('');
+  const [showPassword,   setShowPassword]   = useState(false);
   const [error,          setError]          = useState('');
   const [loading,        setLoading]        = useState(false);
   const [welcome,        setWelcome]        = useState<string | null>(null);
@@ -31,12 +38,10 @@ export const Login = () => {
   const setAuth  = useAuthStore(s => s.setAuth);
   const navigate = useNavigate();
 
-  // Detectar si llegamos por sesión expirada
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('expired') === '1') {
       setSessionExpired(true);
-      // Limpiar el parámetro de la URL sin recargar
       window.history.replaceState({}, '', '/login');
     }
   }, []);
@@ -45,12 +50,10 @@ export const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const { data } = await api.post('/auth/login', { email, password });
       setAuth(data.user, data.token);
       setWelcome(getGreeting(data.user.name));
-      // El saludo se muestra 1.6s antes de entrar al dashboard
       await new Promise(r => setTimeout(r, 1600));
       navigate('/', { replace: true });
     } catch (err: any) {
@@ -60,168 +63,221 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4 font-sans text-zinc-100 overflow-hidden">
-
-      {/* Fondo sutil */}
-      <div className="absolute inset-0 pointer-events-none">
+    <>
+    {/* ── Overlay de bienvenida full-screen ── */}
+    <AnimatePresence>
+      {welcome && (
         <motion.div
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-3xl"
-          animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        />
+          key="welcome-overlay"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 text-center bg-[#09090b]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+          {/* Glow de fondo */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#003352]/30 rounded-full blur-[120px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#00ba8a]/10 rounded-full blur-[80px]" />
+          </div>
+
+          <motion.div
+            className="w-24 h-24 rounded-2xl bg-white p-2.5 shadow-2xl shadow-black/40 relative z-10"
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: [0.175, 0.885, 0.32, 1.275] }}
+          >
+            <img src="/logo.png" alt="FinTrack" className="w-full h-full object-contain" />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="relative z-10 space-y-2"
+          >
+            <p className="text-4xl font-bold text-white tracking-tight">{welcome}</p>
+            <p className="text-zinc-500 text-sm">Cargando tu panel financiero...</p>
+          </motion.div>
+
+          <motion.div
+            className="flex gap-2 relative z-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            {[0, 1, 2].map(i => (
+              <motion.span
+                key={i}
+                className="w-2 h-2 rounded-full bg-[#00ba8a]"
+                animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1, 0.8] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+              />
+            ))}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    <div className="min-h-screen flex bg-[#09090b] font-sans text-zinc-100">
+
+      {/* ── Panel izquierdo — marca ── */}
+      <div className="hidden lg:flex lg:w-[52%] relative flex-col justify-between p-12 overflow-hidden
+                      bg-gradient-to-br from-[#001f35] via-[#002a42] to-[#09090b]">
+
+        {/* Glows decorativos */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-[#003352]/40 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-5%] right-[-5%] w-[400px] h-[400px] bg-[#00ba8a]/10 rounded-full blur-[100px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#00ba8a]/8 rounded-full blur-[80px]" />
+        </div>
+
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-white p-[3px] shadow shadow-white/10">
+            <img src="/logo.png" alt="FinTrack" className="w-full h-full object-contain rounded-lg" />
+          </div>
+          <span className="text-lg font-semibold tracking-tight text-white">FinTrack</span>
+        </div>
+
+        {/* Hero text + features */}
+        <div className="relative z-10 space-y-10">
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight text-white leading-tight">
+              Tomá el control<br />
+              <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                de tus finanzas
+              </span>
+            </h1>
+            <p className="text-zinc-400 text-base leading-relaxed max-w-sm">
+              Registrá tus movimientos, seguí tus préstamos y visualizá tu patrimonio en tiempo real.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {FEATURES.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-4">
+                <div className="w-9 h-9 rounded-lg bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-100">{title}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="relative z-10 text-xs text-zinc-600">
+          © {new Date().getFullYear()} FinTrack · Gestión financiera personal
+        </p>
       </div>
 
-      <AnimatePresence mode="wait">
+      {/* ── Panel derecho — formulario ── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 relative">
 
-        {/* ── Pantalla de bienvenida ── */}
-        {welcome ? (
-          <motion.div
-            key="welcome"
-            className="flex flex-col items-center gap-6 text-center relative z-10"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-          >
-            {/* Avatar / logo grande */}
+        <AnimatePresence mode="wait">
+
+          {!welcome && (
             <motion.div
-              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-3xl shadow-2xl shadow-indigo-500/30"
-              initial={{ scale: 0.6, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, ease: [0.175, 0.885, 0.32, 1.275] }}
+              key="form"
+              className="w-full max-w-sm"
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
             >
-              F
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-            >
-              <p className="text-3xl font-semibold text-white tracking-tight">{welcome}</p>
-              <p className="text-zinc-500 mt-2 text-sm">Cargando tu panel financiero...</p>
-            </motion.div>
-
-            {/* Dots de carga */}
-            <motion.div
-              className="flex gap-1.5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              {[0, 1, 2].map(i => (
-                <motion.span
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-indigo-400"
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                />
-              ))}
-            </motion.div>
-          </motion.div>
-
-        ) : (
-
-          /* ── Formulario ── */
-          <motion.div
-            key="form"
-            className="w-full max-w-sm relative z-10"
-            variants={stagger}
-            initial="hidden"
-            animate="show"
-            exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
-          >
-            {/* Logo */}
-            <motion.div variants={fadeUp} className="text-center mb-8">
-              <motion.div
-                className="mx-auto w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xl mb-6 shadow-lg shadow-indigo-500/30"
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, ease: [0.175, 0.885, 0.32, 1.275] }}
-              >
-                F
+              {/* Logo mobile */}
+              <motion.div variants={fadeUp} className="flex items-center gap-2.5 mb-8 lg:hidden">
+                <div className="w-8 h-8 rounded-lg bg-white p-[3px]">
+                <img src="/logo.png" alt="FinTrack" className="w-full h-full object-contain rounded-md" />
+              </div>
+                <span className="font-semibold text-white">FinTrack</span>
               </motion.div>
-              <h2 className="text-2xl font-semibold tracking-tight">Bienvenido de nuevo</h2>
-              <p className="text-sm text-zinc-400 mt-2">Ingresa a tu cuenta de FinanceFlow</p>
-            </motion.div>
 
-            <div className="space-y-4">
-              <AnimatePresence>
-                {sessionExpired && (
-                  <motion.div
-                    key="session-expired"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="p-3 text-sm text-amber-400 bg-amber-950/40 border border-amber-800/50 rounded-md text-center overflow-hidden"
-                  >
-                    Tu sesión expiró. Iniciá sesión nuevamente.
+              <motion.div variants={fadeUp} className="mb-8">
+                <h2 className="text-2xl font-bold tracking-tight text-white">Bienvenido de nuevo</h2>
+                <p className="text-sm text-zinc-500 mt-1.5">Ingresá tus credenciales para continuar</p>
+              </motion.div>
+
+              <div className="space-y-5">
+                <AnimatePresence>
+                  {sessionExpired && (
+                    <motion.div key="expired"
+                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="p-3 text-sm text-amber-400 bg-amber-950/40 border border-amber-800/40 rounded-lg text-center overflow-hidden"
+                    >
+                      Tu sesión expiró. Iniciá sesión nuevamente.
+                    </motion.div>
+                  )}
+                  {error && (
+                    <motion.div key="error"
+                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="p-3 text-sm text-red-400 bg-red-950/40 border border-red-900/40 rounded-lg text-center overflow-hidden"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <motion.div variants={fadeUp} className="space-y-1.5">
+                    <label htmlFor="login-email" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Email</label>
+                    <input
+                      id="login-email" type="email" value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      required disabled={loading}
+                      className="w-full bg-zinc-900 border border-zinc-700/60 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/70 transition-all placeholder:text-zinc-600 disabled:opacity-50"
+                      placeholder="tu@email.com"
+                    />
                   </motion.div>
-                )}
-                {error && (
-                  <motion.div
-                    key="error"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="p-3 text-sm text-red-400 bg-red-950/50 border border-red-900/50 rounded-md text-center overflow-hidden"
-                  >
-                    {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <motion.div variants={fadeUp} className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Email</label>
-                  <input
-                    type="email" value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required disabled={loading}
-                    className="w-full bg-[#111111] border border-zinc-800 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-zinc-600 disabled:opacity-60"
-                    placeholder="tu@email.com"
-                  />
-                </motion.div>
-
-                <motion.div variants={fadeUp} className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-300">Contraseña</label>
-                  <input
-                    type="password" value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required disabled={loading}
-                    className="w-full bg-[#111111] border border-zinc-800 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-zinc-600 disabled:opacity-60"
-                    placeholder="••••••••"
-                  />
-                </motion.div>
-
-                <motion.button
-                  variants={fadeUp}
-                  type="submit"
-                  disabled={loading}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-white text-black font-medium rounded-md px-4 py-2.5 text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
-                >
-                  {loading ? (
-                    <>
-                      <motion.span
-                        className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full block"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
+                  <motion.div variants={fadeUp} className="space-y-1.5">
+                    <label htmlFor="login-password" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Contraseña</label>
+                    <div className="relative">
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required disabled={loading}
+                        className="w-full bg-zinc-900 border border-zinc-700/60 rounded-xl px-4 py-3 pr-11 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/70 transition-all placeholder:text-zinc-600 disabled:opacity-50"
+                        placeholder="••••••••"
                       />
-                      Verificando...
-                    </>
-                  ) : 'Iniciar Sesión'}
-                </motion.button>
-              </form>
+                      <button type="button" onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </motion.div>
 
-              <motion.p variants={fadeUp} className="text-center text-sm text-zinc-500 pt-2">
-                ¿No tenés cuenta?{' '}
-                <Link to="/register" className="text-white hover:underline">Registrate</Link>
-              </motion.p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <motion.button
+                    variants={fadeUp} type="submit" disabled={loading} whileTap={{ scale: 0.98 }}
+                    className="w-full bg-[#00ba8a] hover:bg-[#00c994] text-white font-semibold rounded-xl px-4 py-3 text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-[#00ba8a]/20"
+                  >
+                    {loading ? (
+                      <>
+                        <motion.span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full block"
+                          animate={{ rotate: 360 }} transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }} />
+                        Verificando...
+                      </>
+                    ) : 'Iniciar Sesión'}
+                  </motion.button>
+                </form>
+
+                <motion.p variants={fadeUp} className="text-center text-sm text-zinc-500 pt-1">
+                  ¿No tenés cuenta?{' '}
+                  <Link to="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+                    Registrate gratis
+                  </Link>
+                </motion.p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
+    </>
   );
 };

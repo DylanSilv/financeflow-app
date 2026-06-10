@@ -161,8 +161,9 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 {/* Nombre personalizado */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Nombre de la tarjeta</label>
+                    <label htmlFor="card-name" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Nombre de la tarjeta</label>
                     <input
+                      id="card-name"
                       type="text" required value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="Ej. Itaú Visa"
@@ -170,8 +171,9 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Últimos 4 dígitos</label>
+                    <label htmlFor="card-last-four" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Últimos 4 dígitos</label>
                     <input
+                      id="card-last-four"
                       type="text" required maxLength={4} value={lastFour}
                       onChange={e => setLastFour(e.target.value.replace(/\D/g, ''))}
                       placeholder="4242"
@@ -182,8 +184,9 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Tipo</label>
+                    <label htmlFor="card-type" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Tipo</label>
                     <select
+                      id="card-type"
                       value={type} onChange={e => setType(e.target.value as 'CREDIT' | 'DEBIT')}
                       className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                     >
@@ -192,8 +195,9 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Franquicia</label>
+                    <label htmlFor="card-brand" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Franquicia</label>
                     <select
+                      id="card-brand"
                       value={brand} onChange={e => setBrand(e.target.value as 'VISA' | 'MASTERCARD' | 'AMEX')}
                       className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                     >
@@ -206,10 +210,11 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
                 {accounts.length > 0 && (
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">
+                    <label htmlFor="card-account" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">
                       Vincular a cuenta <span className="text-zinc-600 normal-case">(opcional)</span>
                     </label>
                     <select
+                      id="card-account"
                       value={accountId}
                       onChange={e => setAccountId(e.target.value)}
                       className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
@@ -229,10 +234,11 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
                 {type === 'CREDIT' && (
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Límite de crédito</label>
+                    <label htmlFor="card-limit" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Límite de crédito</label>
                     <div className="relative">
                       <span className="absolute left-4 top-3 text-zinc-600">$</span>
                       <input
+                        id="card-limit"
                         type="number" required value={limit}
                         onChange={e => setLimit(e.target.value)}
                         placeholder="0.00"

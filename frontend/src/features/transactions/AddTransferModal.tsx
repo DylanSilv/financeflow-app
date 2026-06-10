@@ -90,8 +90,8 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
                 {/* Origen → Destino */}
                 <div className="flex items-center gap-2">
                   <div className="flex-1 space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-500">Desde</label>
-                    <select value={fromId} onChange={e => setFromId(e.target.value)} required
+                    <label htmlFor="transfer-from" className="text-xs font-medium text-zinc-500">Desde</label>
+                    <select id="transfer-from" value={fromId} onChange={e => setFromId(e.target.value)} required
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all appearance-none"
                     >
                       <option value="">Seleccioná...</option>
@@ -102,8 +102,8 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
                     <ArrowRight className="w-4 h-4 text-zinc-600" />
                   </div>
                   <div className="flex-1 space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-500">Hacia</label>
-                    <select value={toId} onChange={e => setToId(e.target.value)} required
+                    <label htmlFor="transfer-to" className="text-xs font-medium text-zinc-500">Hacia</label>
+                    <select id="transfer-to" value={toId} onChange={e => setToId(e.target.value)} required
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all appearance-none"
                     >
                       <option value="">Seleccioná...</option>
@@ -117,18 +117,18 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
                 {/* Monto + Fecha */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-500">Monto</label>
+                    <label htmlFor="transfer-amount" className="text-xs font-medium text-zinc-500">Monto</label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-zinc-500 text-sm">$</span>
-                      <input type="number" step="0.01" min="0.01" value={amount}
+                      <input id="transfer-amount" type="number" step="0.01" min="0.01" value={amount}
                         onChange={e => setAmount(e.target.value)} required
                         className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg pl-7 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-500">Fecha</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+                    <label htmlFor="transfer-date" className="text-xs font-medium text-zinc-500">Fecha</label>
+                    <input id="transfer-date" type="date" value={date} onChange={e => setDate(e.target.value)} required
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
                     />
                   </div>
@@ -136,8 +136,8 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
 
                 {/* Descripción */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-500">Descripción <span className="text-zinc-700">(opcional)</span></label>
-                  <input type="text" value={description} onChange={e => setDescription(e.target.value)}
+                  <label htmlFor="transfer-description" className="text-xs font-medium text-zinc-500">Descripción <span className="text-zinc-700">(opcional)</span></label>
+                  <input id="transfer-description" type="text" value={description} onChange={e => setDescription(e.target.value)}
                     placeholder="Ej. Pago de alquiler, recarga..."
                     className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-zinc-600"
                   />

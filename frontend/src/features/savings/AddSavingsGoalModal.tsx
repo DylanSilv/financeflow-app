@@ -100,8 +100,9 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
               <form onSubmit={handleSubmit} className="p-6 space-y-5">
 
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Nombre</label>
+                  <label htmlFor="goal-name" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Nombre</label>
                   <input
+                    id="goal-name"
                     type="text" required value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="Ej. Fondo de emergencia, Viaje..."
@@ -110,10 +111,11 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto actual ahorrado</label>
+                  <label htmlFor="goal-current" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto actual ahorrado</label>
                   <div className="relative">
                     <span className="absolute left-4 top-3 text-zinc-600">$</span>
                     <input
+                      id="goal-current"
                       type="number" min="0" step="0.01" value={currentAmount}
                       onChange={e => setCurrentAmount(e.target.value)}
                       placeholder="0"
@@ -140,10 +142,11 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
                     >
                       <div className="grid grid-cols-2 gap-4 pt-1">
                         <div className="space-y-2">
-                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto objetivo</label>
+                          <label htmlFor="goal-target" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto objetivo</label>
                           <div className="relative">
                             <span className="absolute left-4 top-3 text-zinc-600">$</span>
                             <input
+                              id="goal-target"
                               type="number" required={hasTarget} min="1" value={targetAmount}
                               onChange={e => setTargetAmount(e.target.value)}
                               placeholder="0"
@@ -152,8 +155,9 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Fecha límite (opcional)</label>
+                          <label htmlFor="goal-deadline" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Fecha límite (opcional)</label>
                           <input
+                            id="goal-deadline"
                             type="date" value={deadline}
                             onChange={e => setDeadline(e.target.value)}
                             className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"

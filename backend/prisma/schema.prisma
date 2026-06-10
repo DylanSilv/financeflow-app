@@ -3,9 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // ─── USER ────────────────────────────────────────────────────
@@ -15,7 +13,6 @@ model User {
   email         String         @unique
   password      String
   name          String
-  avatarUrl     String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -35,7 +32,6 @@ model Account {
   id             String      @id @default(uuid())
   name           String
   type           AccountType
-  icon           String?
   color          String?
   initialBalance Decimal     @default(0) @db.Decimal(10, 2)
   isArchived     Boolean     @default(false)
@@ -79,7 +75,6 @@ model Transfer {
 model Loan {
   id                String     @id @default(uuid())
   name              String
-  lenderName        String?
   loanType          LoanType
   originalAmount    Decimal    @db.Decimal(10, 2)
   totalInstallments Int
@@ -130,8 +125,6 @@ model Card {
   type        CardType
   limit       Decimal? @db.Decimal(10, 2)
   balanceUsed     Decimal  @default(0) @db.Decimal(10, 2)
-  closingDate     Int?
-  dueDate         Int?
   brand           String?
   lastFourDigits  String?
   color           String?

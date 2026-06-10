@@ -155,8 +155,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
                 {/* Concepto */}
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Concepto</label>
+                  <label htmlFor="add-tx-title" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Concepto</label>
                   <input
+                    id="add-tx-title"
                     type="text" value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="Ej. Cena con amigos"
@@ -167,10 +168,11 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 {/* Monto + Fecha */}
                 <div className="flex gap-4">
                   <div className="space-y-2 flex-1">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Monto</label>
+                    <label htmlFor="add-tx-amount" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Monto</label>
                     <div className="relative">
                       <span className="absolute left-4 top-3 text-zinc-500">$</span>
                       <input
+                        id="add-tx-amount"
                         type="number" step="0.01" min="0.01" value={amount}
                         onChange={e => setAmount(e.target.value)}
                         placeholder="0.00"
@@ -180,10 +182,11 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                   </div>
 
                   <div className="space-y-2 flex-1">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
+                    <label htmlFor="add-tx-date" className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> Fecha
                     </label>
                     <input
+                      id="add-tx-date"
                       type="date"
                       value={date}
                       onChange={e => setDate(e.target.value)}
@@ -196,8 +199,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 {/* Categoría + Forma de pago */}
                 <div className="flex gap-4">
                   <div className="space-y-2 flex-1">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Categoría</label>
+                    <label htmlFor="add-tx-category" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Categoría</label>
                     <select
+                      id="add-tx-category"
                       value={categoryId}
                       onChange={e => setCategoryId(e.target.value)}
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
@@ -210,8 +214,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                   </div>
 
                   <div className="space-y-2 flex-1">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Pago</label>
+                    <label htmlFor="add-tx-payment" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Pago</label>
                     <select
+                      id="add-tx-payment"
                       value={paymentMethod}
                       onChange={e => setPaymentMethod(e.target.value)}
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
@@ -226,8 +231,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 {/* Cuenta */}
                 {accounts.length > 0 && (
                   <div className="space-y-2">
-                    <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Cuenta</label>
+                    <label htmlFor="add-tx-account" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Cuenta</label>
                     <select
+                      id="add-tx-account"
                       value={accountId}
                       onChange={e => setAccountId(e.target.value)}
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"

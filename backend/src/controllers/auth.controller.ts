@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import logger from '../lib/logger';
 import { prisma } from '../lib/Prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -49,7 +50,7 @@ export const register = async (req: Request, res: Response) => {
       token,
     });
   } catch (error) {
-    console.error('Register error:', error);
+    logger.error({ err: error }, 'Register error');
     return res.status(500).json({ error: 'Error interno al crear la cuenta.' });
   }
 };
@@ -75,7 +76,7 @@ export const login = async (req: Request, res: Response) => {
       token,
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error({ err: error }, 'Login error');
     return res.status(500).json({ error: 'Error interno al iniciar sesión.' });
   }
 };

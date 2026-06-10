@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'; // Navigate used in catch-all route
 import { MainLayout } from "@/layouts/MainLayout";
 import Dashboard from "@/features/dashboard/Dashboard";
 import Cards from "@/features/cards/Cards";
@@ -12,10 +12,11 @@ import Loans from "@/features/loans/Loans";
 import Accounts from "@/features/accounts/Accounts";
 import Categories from "@/features/categories/Categories";
 import { useAuthStore } from "@/store/useAuthStore";
+import Landing from "@/features/landing/Landing";
 
 function PrivateRoute() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <Outlet /> : <Landing />;
 }
 
 function App() {

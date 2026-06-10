@@ -120,8 +120,8 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
 
                 {/* Concepto */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-500">Concepto</label>
-                  <input type="text" value={title} onChange={e => setTitle(e.target.value)} required
+                  <label htmlFor="edit-tx-title" className="text-xs font-medium text-zinc-500">Concepto</label>
+                  <input id="edit-tx-title" type="text" value={title} onChange={e => setTitle(e.target.value)} required
                     className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
                   />
                 </div>
@@ -129,17 +129,17 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
                 {/* Monto + Fecha */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-500">Monto</label>
+                    <label htmlFor="edit-tx-amount" className="text-xs font-medium text-zinc-500">Monto</label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-zinc-500 text-sm">$</span>
-                      <input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required
+                      <input id="edit-tx-amount" type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} required
                         className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg pl-7 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-500">Fecha</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} required
+                    <label htmlFor="edit-tx-date" className="text-xs font-medium text-zinc-500">Fecha</label>
+                    <input id="edit-tx-date" type="date" value={date} onChange={e => setDate(e.target.value)} required
                       className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all [color-scheme:dark]"
                     />
                   </div>
@@ -147,8 +147,8 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
 
                 {/* Categoría */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-500">Categoría</label>
-                  <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
+                  <label htmlFor="edit-tx-category" className="text-xs font-medium text-zinc-500">Categoría</label>
+                  <select id="edit-tx-category" value={categoryId} onChange={e => setCategoryId(e.target.value)}
                     className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                   >
                     <option value="">Sin categoría</option>
@@ -158,8 +158,8 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
 
                 {/* Método de pago */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-500">Forma de pago</label>
-                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
+                  <label htmlFor="edit-tx-payment" className="text-xs font-medium text-zinc-500">Forma de pago</label>
+                  <select id="edit-tx-payment" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
                     className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
                   >
                     {PAY_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}

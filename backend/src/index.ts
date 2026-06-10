@@ -1,8 +1,10 @@
 // backend/src/index.ts
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import pinoHttp from 'pino-http';
 import dotenv from 'dotenv';
+import logger from './lib/logger';
 import { prisma } from './lib/Prisma';
 import authRoutes from './routes/auth.routes';
 import transactionRoutes from './routes/transaction.routes';
@@ -25,6 +27,11 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middlewares
+app.use(pinoHttp({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+  redact: ['req.headers.authorization'],
+}));
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -60,7 +67,7 @@ app.use('/api/v1/categories',    categoryRoutes);
 // Root
 app.get('/', (_req, res) => {
   res.status(200).json({
-    name: 'FinanceFlow API',
+    name: 'FinTrack API',
     version: '1.0.0',
     status: 'running',
     endpoints: '/api/v1',
@@ -78,6 +85,18 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+// 404 para rutas desconocidas
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Ruta no encontrada.' });
+});
+
+// Error handler global — Express 5 propaga errores async aquí automáticamente
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error({ err }, 'Unhandled error');
+  res.status(500).json({ error: 'Error interno del servidor.' });
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server ready at http://localhost:${PORT}`);
+  logger.info(`Server ready at http://localhost:${PORT}`);
 });

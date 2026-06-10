@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, CheckCircle2, Clock, RefreshCw, Trash2, ChevronRight, CreditCard, X, Pencil } from 'lucide-react';
+import { Plus, CheckCircle2, Clock, RefreshCw, Trash2, ChevronRight, CreditCard, X, Pencil, Zap } from 'lucide-react';
 import { useFixedExpenseData, FixedExpense } from '@/hooks/useFixedExpenseData';
 import { AddFixedExpenseModal } from './AddFixedExpenseModal';
 import { EditFixedExpenseModal } from './EditFixedExpenseModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/axios';
+
+interface AutoPayResult {
+  count: number;
+  paid: { id: string; name: string; amount: number }[];
+}
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 16 },
@@ -316,10 +321,37 @@ function ExpenseRow({
 
 export const FixedExpenses = () => {
   const { expenses, loading, updateExpense, markAsPaid, toggleAutoPay, deleteExpense, refetch } = useFixedExpenseData();
-  const [isModalOpen,   setIsModalOpen]   = useState(false);
-  const [editTarget,    setEditTarget]    = useState<FixedExpense | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [editTarget,     setEditTarget]     = useState<FixedExpense | null>(null);
+  const [pendingDelete,  setPendingDelete]  = useState<string | null>(null);
+  const [autoPayResult,  setAutoPayResult]  = useState<AutoPayResult | null>(null);
+  const [autoPayLoading, setAutoPayLoading] = useState(false);
+  const hasRunRef = useRef(false);
   const cards = useCards();
+
+  const runAutoPay = async (manual = false) => {
+    if (autoPayLoading) return;
+    setAutoPayLoading(true);
+    try {
+      const res = await api.post<AutoPayResult>('/fixed-expenses/autopay');
+      if (res.data.count > 0 || manual) {
+        setAutoPayResult(res.data);
+        if (res.data.count > 0) refetch();
+      }
+    } catch {
+      // silencioso en auto; en manual mostrar resultado vacío
+      if (manual) setAutoPayResult({ count: 0, paid: [] });
+    } finally {
+      setAutoPayLoading(false);
+    }
+  };
+
+  // Ejecutar AutoPay una vez al montar la página
+  useEffect(() => {
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+    runAutoPay();
+  }, []);
 
   const handlePay = async (id: string, accountId?: string) => {
     await api.patch(`/fixed-expenses/${id}/pay`, accountId ? { accountId } : {});
@@ -342,15 +374,68 @@ export const FixedExpenses = () => {
           <h1 className="text-3xl font-bold tracking-tight text-white">Cuentas Fijas</h1>
           <p className="text-zinc-400 mt-1">Seguimiento de tus pagos recurrentes del mes.</p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
-        >
-          <Plus className="w-4 h-4" /> Nueva Cuenta Fija
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => runAutoPay(true)}
+            disabled={autoPayLoading}
+            title="Procesar pagos automáticos ahora"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border border-zinc-700 text-zinc-400 hover:text-white hover:border-indigo-500 transition-colors disabled:opacity-40"
+          >
+            <Zap className={`w-4 h-4 ${autoPayLoading ? 'animate-pulse text-indigo-400' : ''}`} />
+            AutoPay
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+          >
+            <Plus className="w-4 h-4" /> Nueva Cuenta Fija
+          </motion.button>
+        </div>
       </motion.header>
+
+      {/* Banner AutoPay */}
+      <AnimatePresence>
+        {autoPayResult && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className={`rounded-xl border px-4 py-3 flex items-start justify-between gap-3 ${
+              autoPayResult.count > 0
+                ? 'bg-indigo-500/10 border-indigo-500/30'
+                : 'bg-zinc-800/40 border-zinc-700'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <Zap className={`w-4 h-4 mt-0.5 flex-shrink-0 ${autoPayResult.count > 0 ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <div>
+                {autoPayResult.count > 0 ? (
+                  <>
+                    <p className="text-sm font-medium text-indigo-300">
+                      AutoPay procesó {autoPayResult.count} pago{autoPayResult.count !== 1 ? 's' : ''} automáticamente
+                    </p>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {autoPayResult.paid.map(p =>
+                        `${p.name} ($${p.amount.toLocaleString('es-UY', { minimumFractionDigits: 0 })})`
+                      ).join(' · ')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-zinc-400">No hay pagos automáticos pendientes por hoy.</p>
+                )}
+              </div>
+            </div>
+            <button onClick={() => setAutoPayResult(null)} className="text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0 mt-0.5">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Resumen del mes */}
       <motion.div {...fadeUp(0.1)} className="bg-[#111111] border border-zinc-800 rounded-2xl p-5">

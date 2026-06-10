@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { prisma } from '../lib/Prisma';
+import logger from '../lib/logger';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
 export const getTransactions = async (req: AuthRequest, res: Response) => {
@@ -39,7 +40,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
       transactions.map(t => ({ ...t, amount: Number(t.amount) })),
     );
   } catch (error) {
-    console.error('Error fetching transactions:', error);
+    logger.error({ err: error }, 'Error fetching transactions');
     return res.status(500).json({ error: 'Error interno del servidor al obtener movimientos.' });
   }
 };
@@ -54,7 +55,7 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
     await prisma.transaction.delete({ where: { id } });
     return res.status(204).send();
   } catch (error) {
-    console.error('Error deleting transaction:', error);
+    logger.error({ err: error }, 'Error deleting transaction');
     return res.status(500).json({ error: 'Error al eliminar el movimiento.' });
   }
 };
@@ -134,7 +135,7 @@ export const createTransaction = async (req: AuthRequest, res: Response) => {
 
     return res.status(201).json(transaction);
   } catch (error) {
-    console.error('Error creating transaction:', error);
+    logger.error({ err: error }, 'Error creating transaction');
     return res.status(500).json({ error: 'Error al registrar el movimiento.' });
   }
 };
@@ -199,7 +200,7 @@ export const updateTransaction = async (req: AuthRequest, res: Response) => {
 
     return res.json({ ...updated, amount: Number(updated.amount) });
   } catch (error) {
-    console.error('Error updating transaction:', error);
+    logger.error({ err: error }, 'Error updating transaction');
     return res.status(500).json({ error: 'Error al actualizar el movimiento.' });
   }
 };

@@ -201,7 +201,7 @@ export const TransactionHistory = () => {
 
                   <div className="col-span-2 flex items-center justify-between md:justify-end gap-2 w-full">
                     <span className={`font-semibold ${t.type === 'INCOME' ? 'text-emerald-500' : 'text-zinc-100'}`}>
-                      {t.type === 'INCOME' ? '+' : '-'}${Number(t.amount).toFixed(2)}
+                      {t.type === 'INCOME' ? '+' : '-'}${Math.abs(Number(t.amount)).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
                     </span>
                     <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all">
                       <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}

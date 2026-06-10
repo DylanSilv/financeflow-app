@@ -289,7 +289,7 @@ export default function Settings() {
 
       {/* Versión */}
       <motion.p {...fadeUp(0.25)} className="text-center text-xs text-zinc-700 pb-4">
-        FinanceFlow v1.0.0 — Uso personal
+        FinTrack v1.0.0 — Uso personal
       </motion.p>
 
     </div>

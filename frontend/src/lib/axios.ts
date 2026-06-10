@@ -25,7 +25,8 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
 
-    if ((status === 401 || status === 403) && !redirectingToLogin) {
+    const isAuthRoute = error.config?.url?.includes('/auth/');
+    if ((status === 401 || status === 403) && !isAuthRoute && !redirectingToLogin) {
       redirectingToLogin = true;
       useAuthStore.getState().logout();
       window.location.replace('/login?expired=1');
