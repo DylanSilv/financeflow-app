@@ -1,0 +1,16 @@
+# Env files — nunca subir al repo
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Dependencias
+node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+
+# Misc
+.DS_Store
+*.log
