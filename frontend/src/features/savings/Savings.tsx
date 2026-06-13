@@ -246,7 +246,7 @@ function GoalCard({
 }
 
 export const Savings = () => {
-  const { goals, loading, updateGoal, addFunds, deleteGoal } = useSavingsData();
+  const { goals, loading, refetch, updateGoal, addFunds, deleteGoal } = useSavingsData();
   const { accounts } = useAccountsCache();
   const [isModalOpen,   setIsModalOpen]   = useState(false);
   const [editTarget,    setEditTarget]    = useState<SavingsGoal | null>(null);
@@ -347,7 +347,7 @@ export const Savings = () => {
         </div>
       )}
 
-      <AddSavingsGoalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => {}} />
+      <AddSavingsGoalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={refetch} />
 
       <EditSavingsGoalModal
         goal={editTarget}

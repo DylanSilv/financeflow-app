@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { api } from '@/lib/axios';
 
-interface Account  { id: string; name: string; type: string; }
+interface Account    { id: string; name: string; type: string; }
 interface ApiCategory { id: string; name: string; color: string | null; }
+interface CardOption  { id: string; name: string; type: string; }
 
 interface Props {
   isOpen:    boolean;
@@ -38,7 +39,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [categoryId,    setCategoryId]    = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [accountId,     setAccountId]     = useState('');
+  const [cardId,        setCardId]        = useState('');
   const [accounts,      setAccounts]      = useState<Account[]>([]);
+  const [creditCards,   setCreditCards]   = useState<CardOption[]>([]);
   const [categories,    setCategories]    = useState<ApiCategory[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
@@ -57,6 +60,11 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
     api.get<ApiCategory[]>('/categories').then(r => {
       setCategories(r.data);
       if (r.data.length > 0) setCategoryId(r.data[0].id);
+    }).catch(() => {});
+    api.get<CardOption[]>('/cards').then(r => {
+      const credit = r.data.filter(c => c.type === 'CREDIT');
+      setCreditCards(credit);
+      if (credit.length > 0) setCardId(credit[0].id);
     }).catch(() => {});
   }, []);
 
@@ -89,12 +97,14 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
     try {
       await api.post('/transactions', {
         title,
-        amount:     parsedAmount,
+        amount:        parsedAmount,
         type,
-        date:       toUTCNoon(date),
+        date:          toUTCNoon(date),
         paymentMethod,
-        categoryId: categoryId || undefined,
-        accountId:  accountId || undefined,
+        categoryId:    categoryId || undefined,
+        ...(paymentMethod === 'CREDIT_CARD'
+          ? { cardId:    cardId    || undefined }
+          : { accountId: accountId || undefined }),
       });
 
       onClose();
@@ -228,21 +238,40 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                   </div>
                 </div>
 
-                {/* Cuenta */}
-                {accounts.length > 0 && (
-                  <div className="space-y-2">
-                    <label htmlFor="add-tx-account" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Cuenta</label>
-                    <select
-                      id="add-tx-account"
-                      value={accountId}
-                      onChange={e => setAccountId(e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                    >
-                      {accounts.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                {/* Cuenta / Tarjeta de crédito */}
+                {paymentMethod === 'CREDIT_CARD' ? (
+                  creditCards.length > 0 && (
+                    <div className="space-y-2">
+                      <label htmlFor="add-tx-card" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Tarjeta de crédito</label>
+                      <select
+                        id="add-tx-card"
+                        value={cardId}
+                        onChange={e => setCardId(e.target.value)}
+                        className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                      >
+                        <option value="">Sin tarjeta</option>
+                        {creditCards.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                ) : (
+                  accounts.length > 0 && (
+                    <div className="space-y-2">
+                      <label htmlFor="add-tx-account" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Cuenta</label>
+                      <select
+                        id="add-tx-account"
+                        value={accountId}
+                        onChange={e => setAccountId(e.target.value)}
+                        className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                      >
+                        {accounts.map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
                 )}
 
                 {error && <p className="text-red-400 text-xs">{error}</p>}
