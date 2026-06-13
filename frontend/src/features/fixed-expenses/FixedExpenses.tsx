@@ -320,7 +320,7 @@ function ExpenseRow({
 // ─── Página principal ─────────────────────────────────────────
 
 export const FixedExpenses = () => {
-  const { expenses, loading, updateExpense, markAsPaid, toggleAutoPay, deleteExpense, refetch } = useFixedExpenseData();
+  const { expenses, loading, updateExpense, toggleAutoPay, deleteExpense, refetch } = useFixedExpenseData();
   const [isModalOpen,    setIsModalOpen]    = useState(false);
   const [editTarget,     setEditTarget]     = useState<FixedExpense | null>(null);
   const [pendingDelete,  setPendingDelete]  = useState<string | null>(null);

@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import {
-  ArrowUpRight, ArrowDownRight, Wallet, TrendingUp,
+  ArrowUpRight, ArrowDownRight, Wallet,
   RefreshCw, Target, CreditCard, Building2, ArrowRight, Zap,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';

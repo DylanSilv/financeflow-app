@@ -21,6 +21,7 @@ function GoalCard({
   index,
   accounts,
   onAddFunds,
+  onEdit,
   onDelete,
 }: {
   goal:       SavingsGoal;
