@@ -29,14 +29,39 @@ const Skeleton = ({ h = 'h-8', w = 'w-full' }: { h?: string; w?: string }) => (
   <div className={`${h} ${w} bg-zinc-800/60 animate-pulse rounded-lg`} />
 );
 
+// ─── Help Tooltip ────────────────────────────────────────────
+
+function HelpTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative inline-flex flex-shrink-0"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <div className="w-4 h-4 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center cursor-help transition-colors">
+        <span className="text-[9px] font-bold text-zinc-400 leading-none">?</span>
+      </div>
+      {show && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-[#1c1c1c] border border-zinc-700 rounded-xl px-3 py-2.5 text-xs text-zinc-300 shadow-2xl z-50 pointer-events-none leading-relaxed">
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-zinc-700" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Section Header ──────────────────────────────────────────
 
-function SectionHeader({ title, subtitle, accent = '#6366f1' }: { title: string; subtitle?: string; accent?: string }) {
+function SectionHeader({ title, subtitle, accent = '#6366f1', tooltip }: { title: string; subtitle?: string; accent?: string; tooltip?: string }) {
   return (
     <div className="flex items-center gap-3 mb-4">
       <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: accent }} />
       <div>
-        <h3 className="text-base font-semibold text-white">{title}</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          {tooltip && <HelpTooltip text={tooltip} />}
+        </div>
         {subtitle && <p className="text-xs text-zinc-500 mt-0.5">{subtitle}</p>}
       </div>
     </div>
@@ -55,10 +80,10 @@ function AnimatedAmount({ rawValue, format }: { rawValue: number; format: (n: nu
 type Trend = 'positive' | 'negative' | 'neutral';
 
 function MetricCard({
-  title, amount, rawValue, sub, trend, icon: Icon, loading, accentColor,
+  title, amount, rawValue, sub, trend, icon: Icon, loading, accentColor, tooltip,
 }: {
   title: string; amount: string; rawValue?: number; sub: string;
-  trend: Trend; icon: React.ElementType; loading: boolean; accentColor: string;
+  trend: Trend; icon: React.ElementType; loading: boolean; accentColor: string; tooltip?: string;
 }) {
   return (
     <motion.div
@@ -72,7 +97,10 @@ function MetricCard({
         style={{ backgroundColor: accentColor }} />
 
       <div className="flex items-center justify-between pt-1">
-        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">{title}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">{title}</span>
+          {tooltip && <HelpTooltip text={tooltip} />}
+        </div>
         <div className="p-2 rounded-xl" style={{ backgroundColor: accentColor + '18' }}>
           <Icon className="w-4 h-4" style={{ color: accentColor }} />
         </div>
@@ -402,24 +430,28 @@ export default function Dashboard() {
           amount={fmtDec(balance)} rawValue={balance}
           sub={balance >= 0 ? '↑ Patrimonio neto' : '↓ Balance negativo'}
           trend={balance >= 0 ? 'positive' : 'negative'} icon={Wallet}
+          tooltip="Suma de los saldos disponibles en todas tus cuentas. Representa tu patrimonio neto en este momento."
         />
         <MetricCard
           title="Ingresos del mes" loading={loading} accentColor="#10b981"
           amount={fmt(mIncome)} rawValue={mIncome}
           sub={mIncome > 0 ? `+$${fmt(mIncome)} ingresado` : 'Sin ingresos este mes'}
           trend={mIncome > 0 ? 'positive' : 'neutral'} icon={ArrowUpRight}
+          tooltip="Total de ingresos registrados durante el mes actual. Incluye sueldos, transferencias recibidas y cualquier entrada de dinero."
         />
         <MetricCard
           title="Gastos del mes" loading={loading} accentColor="#f87171"
           amount={fmt(mExpenses)} rawValue={mExpenses}
           sub={mExpenses > 0 ? `-$${fmt(mExpenses)} gastado` : 'Sin gastos este mes'}
           trend={mExpenses > 0 ? 'negative' : 'neutral'} icon={ArrowDownRight}
+          tooltip="Total de egresos registrados durante el mes actual. Incluye todos tus gastos, compras y pagos realizados."
         />
         <MetricCard
           title="Total ahorrado" loading={loading} accentColor="#a855f7"
           amount={fmt(totalSaved)} rawValue={totalSaved}
           sub={`${ahorros?.length ?? 0} fondo${(ahorros?.length ?? 0) !== 1 ? 's' : ''} activo${(ahorros?.length ?? 0) !== 1 ? 's' : ''}`}
           trend={totalSaved > 0 ? 'positive' : 'neutral'} icon={Target}
+          tooltip="Suma del dinero acumulado en todos tus objetivos de ahorro. No incluye el saldo general de tus cuentas."
         />
       </div>
 
@@ -430,6 +462,7 @@ export default function Dashboard() {
             title="Evolución Patrimonial"
             subtitle="Ingresos, gastos y balance acumulado por mes"
             accent="#6366f1"
+            tooltip="Muestra cómo evolucionaron tus ingresos, gastos y balance mes a mes. Las barras son ingresos y gastos; la línea es tu balance acumulado."
           />
           <div className="flex items-center gap-3 text-[11px] text-zinc-500">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" />Ingresos</span>
@@ -478,6 +511,7 @@ export default function Dashboard() {
                 title="Gastos por Categoría"
                 subtitle={catMode === 'month' ? catMonthLabel : 'Total histórico'}
                 accent="#f59e0b"
+                tooltip="Distribución de tus gastos según la categoría asignada. Podés ver el mes actual o el historial completo con el selector."
               />
               {!catLoading && gastosCategorias && (
                 <p className="text-lg font-bold text-white -mt-2 ml-4">
@@ -567,7 +601,9 @@ export default function Dashboard() {
         {/* Compromisos Activos */}
         <div className="bg-[#111111] border border-zinc-800/60 p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-5">
-            <SectionHeader title="Compromisos Activos" subtitle="Préstamos y cuotas en curso" accent="#ef4444" />
+            <SectionHeader title="Compromisos Activos" subtitle="Préstamos y cuotas en curso" accent="#ef4444"
+            tooltip="Préstamos personales y compras en cuotas que todavía tenés pendientes. Muestra cuántas cuotas pagaste y cuánto falta."
+          />
             {!loading && prestamos && prestamos.length > 0 && (
               <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-semibold -mt-4">
                 {prestamos.length}
@@ -620,7 +656,9 @@ export default function Dashboard() {
 
       {/* ── Balance por Cuenta ── */}
       <div>
-        <SectionHeader title="Balance por Cuenta" subtitle="Saldo actual en cada cuenta" accent="#06b6d4" />
+        <SectionHeader title="Balance por Cuenta" subtitle="Saldo actual en cada cuenta" accent="#06b6d4"
+          tooltip="Saldo disponible en cada una de tus cuentas, calculado en base a tu saldo inicial más los movimientos registrados."
+        />
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[1,2,3,4,5,6].map(i => <Skeleton key={i} h="h-[68px]" />)}
@@ -635,7 +673,9 @@ export default function Dashboard() {
       {/* ── Objetivos de Ahorro ── */}
       {(loading || (ahorros && ahorros.length > 0)) && (
         <div>
-          <SectionHeader title="Objetivos de Ahorro" subtitle="Progreso de tus metas" accent="#a855f7" />
+          <SectionHeader title="Objetivos de Ahorro" subtitle="Progreso de tus metas" accent="#a855f7"
+            tooltip="Tus metas de ahorro y cuánto llevás acumulado en cada una. Cuando llegás al 100% la meta está cumplida."
+          />
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[1,2,3].map(i => <Skeleton key={i} h="h-28" />)}
