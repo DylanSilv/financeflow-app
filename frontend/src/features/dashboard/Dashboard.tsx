@@ -275,9 +275,17 @@ const ChartTooltip = ({ active, payload, label }: ChartTooltipProps) => {
 
 // ─── Greeting ────────────────────────────────────────────────
 
-function useGreeting(name: string) {
+function getSaludo() {
   const h = new Date().getHours();
-  const saludo = h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
+  return h >= 20 || h < 6 ? 'Buenas noches' : h < 12 ? 'Buenos días' : 'Buenas tardes';
+}
+
+function useGreeting(name: string) {
+  const [saludo, setSaludo] = useState(getSaludo);
+  useEffect(() => {
+    const id = setInterval(() => setSaludo(getSaludo()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   return `${saludo}, ${name.split(' ')[0]}`;
 }
 

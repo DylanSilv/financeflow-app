@@ -16,34 +16,71 @@ export const getBalanceTotal = async (req: AuthRequest, res: Response) => {
   const monthStart = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1);
   const monthEnd   = new Date(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59);
 
-  const [initBalSum, allIncome, allExpenses, monthIncome, monthExpenses] = await Promise.all([
-    prisma.account.aggregate({
-      where: { userId, isArchived: false },
-      _sum: { initialBalance: true },
-    }),
-    prisma.transaction.aggregate({ where: { userId, type: 'INCOME'  }, _sum: { amount: true } }),
-    prisma.transaction.aggregate({ where: { userId, type: 'EXPENSE' }, _sum: { amount: true } }),
+  // Cargamos cuentas con transfers para calcular saldo real por cuenta
+  const accounts = await prisma.account.findMany({
+    where: { userId, isArchived: false },
+    include: {
+      transfersFrom: { where: { userId }, select: { amount: true } },
+      transfersTo:   { where: { userId }, select: { amount: true } },
+    },
+  });
+
+  const accountIds        = accounts.map(a => a.id);
+  const benefitAccountIds = accounts.filter(a => a.type === 'BENEFIT').map(a => a.id);
+  const nonBenefitIds     = accountIds.filter(id => !benefitAccountIds.includes(id));
+
+  // Saldos históricos por cuenta (solo transacciones con accountId)
+  const txSumsAll = accountIds.length > 0 ? await prisma.transaction.groupBy({
+    by:    ['accountId', 'type'],
+    where: { userId, accountId: { in: accountIds } },
+    _sum:  { amount: true },
+  }) : [];
+
+  // Ingresos del mes: excluir cuentas BENEFIT (IVA, beneficios)
+  // Gastos del mes: solo los que salen de una cuenta (excluir gastos de tarjeta de crédito)
+  const [monthIncomeTxs, monthExpenseTxs] = await Promise.all([
     prisma.transaction.aggregate({
-      where: { userId, type: 'INCOME',  date: { gte: monthStart, lte: monthEnd } },
+      where: {
+        userId, type: 'INCOME', date: { gte: monthStart, lte: monthEnd },
+        ...(nonBenefitIds.length > 0 ? { accountId: { in: nonBenefitIds } } : { accountId: { not: null } }),
+      },
       _sum: { amount: true },
     }),
     prisma.transaction.aggregate({
-      where: { userId, type: 'EXPENSE', date: { gte: monthStart, lte: monthEnd } },
+      where: { userId, type: 'EXPENSE', date: { gte: monthStart, lte: monthEnd }, accountId: { not: null } },
       _sum: { amount: true },
     }),
   ]);
 
-  const totalIncome   = N(allIncome._sum.amount);
-  const totalExpenses = N(allExpenses._sum.amount);
-  const initBalance   = N(initBalSum._sum.initialBalance);
+  // Construir mapa accountId → { income, expenses }
+  const txMap = new Map<string, { income: number; expenses: number }>();
+  for (const r of txSumsAll) {
+    const id = r.accountId!;
+    if (!txMap.has(id)) txMap.set(id, { income: 0, expenses: 0 });
+    const e = txMap.get(id)!;
+    if (r.type === 'INCOME')  e.income   = N(r._sum.amount);
+    if (r.type === 'EXPENSE') e.expenses = N(r._sum.amount);
+  }
+
+  // Sumar saldo real de cada cuenta
+  let totalBalance = 0;
+  for (const acc of accounts) {
+    const sums       = txMap.get(acc.id) ?? { income: 0, expenses: 0 };
+    const transferIn  = acc.transfersTo.reduce(  (s, t) => s + N(t.amount), 0);
+    const transferOut = acc.transfersFrom.reduce((s, t) => s + N(t.amount), 0);
+    totalBalance += N(acc.initialBalance) + sums.income - sums.expenses + transferIn - transferOut;
+  }
+
+  const mIncome   = N(monthIncomeTxs._sum.amount);
+  const mExpenses = N(monthExpenseTxs._sum.amount);
 
   return res.json({
-    balance:             initBalance + totalIncome - totalExpenses,
-    totalIncome,
-    totalExpenses,
-    monthIncome:   N(monthIncome._sum.amount),
-    monthExpenses: N(monthExpenses._sum.amount),
-    monthBalance:  N(monthIncome._sum.amount) - N(monthExpenses._sum.amount),
+    balance:       totalBalance,
+    totalIncome:   0,
+    totalExpenses: 0,
+    monthIncome:   mIncome,
+    monthExpenses: mExpenses,
+    monthBalance:  mIncome - mExpenses,
   });
 };
 
@@ -216,9 +253,9 @@ export const getEvolucionPatrimonial = async (req: AuthRequest, res: Response) =
     history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
   } catch { /* sin archivo histórico */ }
 
-  // ── Transacciones reales de la DB ────────────────────────────
+  // ── Transacciones reales de la DB (solo las vinculadas a cuentas) ──
   const txs = await prisma.transaction.findMany({
-    where:   { userId },
+    where:   { userId, accountId: { not: null } },
     select:  { amount: true, date: true, type: true },
     orderBy: { date: 'asc' },
   });
@@ -245,7 +282,8 @@ export const getEvolucionPatrimonial = async (req: AuthRequest, res: Response) =
     // Saltar meses cubiertos por el historial JSON (están completos)
     if (historicalKeys.has(key)) continue;
 
-    const label = d.toLocaleString('es-UY', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+    const monthName = d.toLocaleString('es-UY', { month: 'short', timeZone: 'UTC' }).replace('.', '');
+    const label = `${monthName} ${year}`;
     if (!map.has(key)) map.set(key, { year, month, label, income: 0, expenses: 0 });
 
     const entry = map.get(key)!;
