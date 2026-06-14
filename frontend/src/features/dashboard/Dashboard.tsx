@@ -9,7 +9,8 @@ import {
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useDashboardData, AccountBalance, ActiveLoan, SavingsGoal, CategoryExpense } from '@/hooks/useDashboardData';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -32,20 +33,31 @@ const Skeleton = ({ h = 'h-8', w = 'w-full' }: { h?: string; w?: string }) => (
 // ─── Help Tooltip ────────────────────────────────────────────
 
 function HelpTooltip({ text }: { text: string }) {
-  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const show = useCallback(() => {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    setPos({ x: r.left + r.width / 2, y: r.top + window.scrollY });
+  }, []);
+
+  const hide = useCallback(() => setPos(null), []);
+
   return (
-    <div className="relative inline-flex flex-shrink-0"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
+    <div ref={ref} className="inline-flex flex-shrink-0" onMouseEnter={show} onMouseLeave={hide}>
       <div className="w-4 h-4 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center cursor-help transition-colors">
         <span className="text-[9px] font-bold text-zinc-400 leading-none">?</span>
       </div>
-      {show && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-[#1c1c1c] border border-zinc-700 rounded-xl px-3 py-2.5 text-xs text-zinc-300 shadow-2xl z-50 pointer-events-none leading-relaxed">
+      {pos && createPortal(
+        <div
+          className="fixed w-56 bg-[#1c1c1c] border border-zinc-700 rounded-xl px-3 py-2.5 text-xs text-zinc-300 shadow-2xl z-[9999] pointer-events-none leading-relaxed"
+          style={{ left: pos.x, top: pos.y - 8, transform: 'translate(-50%, -100%)' }}
+        >
           {text}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-zinc-700" />
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
