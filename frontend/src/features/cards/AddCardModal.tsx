@@ -14,7 +14,7 @@ interface Props {
 const BANKS = [
   { id: 'itau',         name: 'Itaú',         gradient: 'from-orange-600 to-orange-400',  text: 'text-white' },
   { id: 'santander',    name: 'Santander',    gradient: 'from-red-700 to-rose-600',       text: 'text-white' },
-  { id: 'alimentacion', name: 'Alimentación', gradient: 'from-green-700 to-emerald-500',  text: 'text-white' },
+  { id: 'alimentacion', name: 'Alimentación', gradient: 'from-yellow-500 to-amber-400',   text: 'text-white' },
   { id: 'creditel',     name: 'Creditel',     gradient: 'from-blue-700 to-cyan-500',      text: 'text-white' },
   { id: 'scotiabank',   name: 'Scotiabank',   gradient: 'from-red-900 to-red-700',        text: 'text-white' },
   { id: 'prex',         name: 'Prex',         gradient: 'from-violet-700 to-violet-500',  text: 'text-white' },

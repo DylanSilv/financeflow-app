@@ -16,7 +16,7 @@ const fadeUp = (delay = 0) => ({
 const BANK_ACCENT: Record<string, string> = {
   'from-orange-600 to-orange-400': 'Itaú',
   'from-red-700 to-rose-600':      'Santander',
-  'from-green-700 to-emerald-500': 'Alimentación',
+  'from-yellow-500 to-amber-400':  'Alimentación',
   'from-blue-700 to-cyan-500':     'Creditel',
   'from-red-900 to-red-700':       'Scotiabank',
   'from-violet-700 to-violet-500': 'Prex',
