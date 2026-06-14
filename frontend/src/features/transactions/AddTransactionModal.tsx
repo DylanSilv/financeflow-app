@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { api } from '@/lib/axios';
 
-interface Account    { id: string; name: string; type: string; }
+interface Account     { id: string; name: string; type: string; }
 interface ApiCategory { id: string; name: string; color: string | null; }
-interface CardOption  { id: string; name: string; type: string; }
+interface CardOption  { id: string; name: string; type: string; dueDay: number | null; }
 
 interface Props {
   isOpen:    boolean;
@@ -40,6 +40,8 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [accountId,     setAccountId]     = useState('');
   const [cardId,        setCardId]        = useState('');
+  const [withCuotas,    setWithCuotas]    = useState(false);
+  const [numCuotas,     setNumCuotas]     = useState('');
   const [accounts,      setAccounts]      = useState<Account[]>([]);
   const [creditCards,   setCreditCards]   = useState<CardOption[]>([]);
   const [categories,    setCategories]    = useState<ApiCategory[]>([]);
@@ -49,7 +51,8 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   useEffect(() => {
     if (!isOpen) return;
     setTitle(''); setAmount(''); setDate(todayISO());
-    setType('EXPENSE'); setCategoryId(''); setPaymentMethod('CASH'); setError(null);
+    setType('EXPENSE'); setCategoryId(''); setPaymentMethod('CASH');
+    setWithCuotas(false); setNumCuotas(''); setError(null);
   }, [isOpen]);
 
   useEffect(() => {
@@ -93,6 +96,14 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       return;
     }
 
+    const parsedCuotas = withCuotas && paymentMethod === 'CREDIT_CARD' ? parseInt(numCuotas, 10) : 0;
+    if (withCuotas && paymentMethod === 'CREDIT_CARD') {
+      if (!numCuotas || isNaN(parsedCuotas) || parsedCuotas < 2) {
+        setError('La cantidad de cuotas debe ser 2 o más.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       await api.post('/transactions', {
@@ -106,6 +117,20 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
           ? { cardId:    cardId    || undefined }
           : { accountId: accountId || undefined }),
       });
+
+      if (parsedCuotas >= 2 && paymentMethod === 'CREDIT_CARD') {
+        const installmentAmount = parsedAmount / parsedCuotas;
+        const selectedCard = creditCards.find(c => c.id === cardId);
+        const dueDate = selectedCard?.dueDay ?? 10;
+        await api.post('/fixed-expenses', {
+          name:              `Cuotas: ${title}`,
+          amount:            installmentAmount,
+          dueDate,
+          hasInstallments:   true,
+          totalInstallments: parsedCuotas,
+          paidInstallments:  0,
+        });
+      }
 
       onClose();
       onSuccess?.();
@@ -241,20 +266,60 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 {/* Cuenta / Tarjeta de crédito */}
                 {paymentMethod === 'CREDIT_CARD' ? (
                   creditCards.length > 0 && (
-                    <div className="space-y-2">
-                      <label htmlFor="add-tx-card" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Tarjeta de crédito</label>
-                      <select
-                        id="add-tx-card"
-                        value={cardId}
-                        onChange={e => setCardId(e.target.value)}
-                        className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                      >
-                        <option value="">Sin tarjeta</option>
-                        {creditCards.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <>
+                      <div className="space-y-2">
+                        <label htmlFor="add-tx-card" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Tarjeta de crédito</label>
+                        <select
+                          id="add-tx-card"
+                          value={cardId}
+                          onChange={e => setCardId(e.target.value)}
+                          className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                        >
+                          <option value="">Sin tarjeta</option>
+                          {creditCards.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Cuotas */}
+                      {type === 'EXPENSE' && (
+                        <div className="space-y-3">
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={withCuotas}
+                              onChange={e => { setWithCuotas(e.target.checked); setNumCuotas(''); }}
+                              className="w-4 h-4 accent-indigo-500 rounded"
+                            />
+                            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Compra en cuotas</span>
+                          </label>
+
+                          {withCuotas && (
+                            <div className="flex gap-4 items-start">
+                              <div className="space-y-1 flex-1">
+                                <label htmlFor="add-tx-cuotas" className="text-xs text-zinc-500">Cantidad de cuotas</label>
+                                <input
+                                  id="add-tx-cuotas"
+                                  type="number" min="2" max="72" value={numCuotas}
+                                  onChange={e => setNumCuotas(e.target.value)}
+                                  placeholder="Ej. 12"
+                                  className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
+                                />
+                              </div>
+                              {amount && numCuotas && parseInt(numCuotas) >= 2 && !isNaN(parseFloat(amount)) && (
+                                <div className="space-y-1 flex-1 pt-0.5">
+                                  <p className="text-xs text-zinc-500">Cuota mensual</p>
+                                  <p className="text-sm font-semibold text-indigo-400 py-2.5">
+                                    ${(parseFloat(amount) / parseInt(numCuotas)).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )
                 ) : (
                   accounts.length > 0 && (

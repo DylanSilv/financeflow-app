@@ -106,10 +106,15 @@ function ExpenseRow({
 
         {/* Nombre + info cuotas */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-sm font-medium truncate ${isPaid ? 'text-zinc-400' : 'text-zinc-100'}`}>
               {expense.name}
             </span>
+            {isOverdue && (
+              <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0 border border-red-500/20">
+                Vencida
+              </span>
+            )}
             {expense.loanName && (
               <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
                 cuotas

@@ -74,6 +74,11 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
           <p className="text-2xl font-bold text-white tracking-tight">
             ${card.balance.toLocaleString('es-UY', { minimumFractionDigits: 2 })}
           </p>
+          {card.limit > 0 && (
+            <p className="text-white/60 text-xs mt-1">
+              Disponible: <span className="text-white/80 font-medium">${(card.limit - card.balance).toLocaleString('es-UY', { minimumFractionDigits: 2 })}</span>
+            </p>
+          )}
           <p className="text-white/60 text-sm tracking-[0.2em] font-mono mt-3">
             •••• •••• •••• {card.lastFourDigits}
           </p>
@@ -98,6 +103,12 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
               transition={{ duration: 0.8, delay: index * 0.08 + 0.3, ease: 'easeOut' }}
             />
           </div>
+          {card.dueDay && (
+            <p className="text-zinc-600 text-[10px] mt-2">
+              Vence el día {card.dueDay} de cada mes
+              {card.statementDay ? ` · Cierra el día ${card.statementDay}` : ''}
+            </p>
+          )}
         </div>
       )}
 

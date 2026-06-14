@@ -65,6 +65,8 @@ export const getCards = async (req: AuthRequest, res: Response) => {
         balance,
         balanceUsed,
         accountId:      c.accountId ?? null,
+        statementDay:   c.statementDay ?? null,
+        dueDay:         c.dueDay ?? null,
       };
     }),
   );
@@ -72,7 +74,7 @@ export const getCards = async (req: AuthRequest, res: Response) => {
 
 export const createCard = async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
-  const { name, type, brand, lastFourDigits, color, limit, accountId } = req.body;
+  const { name, type, brand, lastFourDigits, color, limit, accountId, statementDay, dueDay } = req.body;
 
   if (!name || !type) {
     return res.status(400).json({ error: 'Faltan campos obligatorios.' });
@@ -89,6 +91,8 @@ export const createCard = async (req: AuthRequest, res: Response) => {
       balanceUsed:    0,
       userId,
       accountId:      accountId ?? null,
+      statementDay:   statementDay ? parseInt(statementDay, 10) : null,
+      dueDay:         dueDay       ? parseInt(dueDay, 10)       : null,
     },
   });
 
@@ -99,6 +103,8 @@ export const createCard = async (req: AuthRequest, res: Response) => {
     color:          card.color ?? 'from-zinc-900 to-zinc-700',
     limit:          N(card.limit),
     balanceUsed:    N(card.balanceUsed),
+    statementDay:   card.statementDay ?? null,
+    dueDay:         card.dueDay       ?? null,
   });
 };
 

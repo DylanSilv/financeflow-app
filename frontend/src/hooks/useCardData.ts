@@ -12,6 +12,8 @@ export interface Card {
   balance:        number;  // DEBIT: saldo disponible de la cuenta | CREDIT: deuda actual (balanceUsed)
   balanceUsed:    number;
   accountId:      string | null;
+  statementDay:   number | null;
+  dueDay:         number | null;
 }
 
 interface State {

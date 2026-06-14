@@ -23,16 +23,18 @@ const BANKS = [
 ] as const;
 
 export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
-  const [selectedBank, setSelectedBank] = useState<typeof BANKS[number] | null>(null);
-  const [name,         setName]         = useState('');
-  const [type,         setType]         = useState<'CREDIT' | 'DEBIT'>('CREDIT');
-  const [brand,        setBrand]        = useState<'VISA' | 'MASTERCARD' | 'AMEX'>('VISA');
-  const [limit,        setLimit]        = useState('');
-  const [lastFour,     setLastFour]     = useState('');
-  const [accountId,    setAccountId]    = useState('');
-  const [accounts,     setAccounts]     = useState<Account[]>([]);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState<string | null>(null);
+  const [selectedBank,  setSelectedBank]  = useState<typeof BANKS[number] | null>(null);
+  const [name,          setName]          = useState('');
+  const [type,          setType]          = useState<'CREDIT' | 'DEBIT'>('CREDIT');
+  const [brand,         setBrand]         = useState<'VISA' | 'MASTERCARD' | 'AMEX'>('VISA');
+  const [limit,         setLimit]         = useState('');
+  const [lastFour,      setLastFour]      = useState('');
+  const [accountId,     setAccountId]     = useState('');
+  const [statementDay,  setStatementDay]  = useState('');
+  const [dueDay,        setDueDay]        = useState('');
+  const [accounts,      setAccounts]      = useState<Account[]>([]);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -68,10 +70,13 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
         color:          selectedBank.gradient,
         limit:          type === 'CREDIT' ? parseFloat(limit) : 0,
         accountId:      accountId || undefined,
+        statementDay:   type === 'CREDIT' && statementDay ? parseInt(statementDay, 10) : undefined,
+        dueDay:         type === 'CREDIT' && dueDay       ? parseInt(dueDay, 10)       : undefined,
       });
 
       setSelectedBank(null); setName('');
       setLimit(''); setLastFour('');
+      setStatementDay(''); setDueDay('');
       onClose();
       onSuccess?.();
     } catch {
@@ -233,19 +238,48 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 )}
 
                 {type === 'CREDIT' && (
-                  <div className="space-y-2">
-                    <label htmlFor="card-limit" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Límite de crédito</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3 text-zinc-600">$</span>
-                      <input
-                        id="card-limit"
-                        type="number" required value={limit}
-                        onChange={e => setLimit(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
-                      />
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="card-limit" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Límite de crédito</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-3 text-zinc-600">$</span>
+                        <input
+                          id="card-limit"
+                          type="number" required value={limit}
+                          onChange={e => setLimit(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="card-statement-day" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">
+                          Día de cierre <span className="normal-case text-zinc-600">(opcional)</span>
+                        </label>
+                        <input
+                          id="card-statement-day"
+                          type="number" min="1" max="31" value={statementDay}
+                          onChange={e => setStatementDay(e.target.value)}
+                          placeholder="Ej. 3"
+                          className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="card-due-day" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">
+                          Día de vencimiento <span className="normal-case text-zinc-600">(opcional)</span>
+                        </label>
+                        <input
+                          id="card-due-day"
+                          type="number" min="1" max="31" value={dueDay}
+                          onChange={e => setDueDay(e.target.value)}
+                          placeholder="Ej. 13"
+                          className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {error && <p className="text-red-400 text-xs">{error}</p>}
