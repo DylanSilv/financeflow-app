@@ -45,7 +45,10 @@ app.use(helmet({
 const CORS_ORIGINS = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:5174').split(',');
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || CORS_ORIGINS.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (CORS_ORIGINS.includes(origin)) return cb(null, true);
+    // Permite cualquier URL de Vercel (preview + producción)
+    if (/^https:\/\/[a-z0-9-]+(\.vercel\.app)$/.test(origin)) return cb(null, true);
     cb(new Error('CORS not allowed'));
   },
   credentials: true,
