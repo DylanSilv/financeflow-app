@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTransactionData } from '@/hooks/useTransactionData';
 import { AddTransactionModal } from './AddTransactionModal';
 import { EditTransactionModal } from './EditTransactionModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Search, ArrowDownRight, ArrowUpRight, Trash2, Plus, Filter, Pencil, ChevronLeft, ChevronRight, ArrowRight, Landmark } from 'lucide-react';
+import { Search, ArrowDownRight, ArrowUpRight, Trash2, Plus, Filter, Pencil, ChevronLeft, ChevronRight, ArrowRight, Landmark, CreditCard } from 'lucide-react';
 import { AddTransferModal } from './AddTransferModal';
 import { useTransferData } from '@/hooks/useTransferData';
 import { useAccountsCache } from '@/hooks/useAccountsCache';
+import { api } from '@/lib/axios';
 import type { Transaction } from '@/hooks/useTransactionData';
 
 const fadeUp = (delay = 0) => ({
@@ -29,22 +30,33 @@ function toUTCBounds(date: Date): { dateFrom: string; dateTo: string } {
   };
 }
 
+interface CreditCardOption { id: string; name: string; }
+
 export const TransactionHistory = () => {
-  const [isModalOpen,        setIsModalOpen]        = useState(false);
+  const [isModalOpen,         setIsModalOpen]         = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const { createTransfer } = useTransferData();
   const { accounts } = useAccountsCache();
-  const [searchTerm,     setSearchTerm]     = useState('');
-  const [filterType,     setFilterType]     = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
+  const [creditCards,     setCreditCards]     = useState<CreditCardOption[]>([]);
+  const [searchTerm,      setSearchTerm]      = useState('');
+  const [filterType,      setFilterType]      = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [filterAccountId, setFilterAccountId] = useState('');
+  const [filterCardId,    setFilterCardId]    = useState('');
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string; amount: number } | null>(null);
   const [editTarget,    setEditTarget]    = useState<Transaction | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
+
+  useEffect(() => {
+    api.get<{ id: string; name: string; type: string }[]>('/cards')
+      .then(r => setCreditCards(r.data.filter(c => c.type === 'CREDIT')))
+      .catch(() => {});
+  }, []);
 
   const bounds   = selectedMonth ? toUTCBounds(selectedMonth) : {};
   const { transactions: allTransactions, loading, hasMore, refetch, loadMore, deleteTransaction, updateTransaction } = useTransactionData({
     search:    searchTerm || undefined,
     accountId: filterAccountId || undefined,
+    cardId:    filterCardId    || undefined,
     ...bounds,
   });
 
@@ -107,12 +119,28 @@ export const TransactionHistory = () => {
               <Landmark className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
               <select
                 value={filterAccountId}
-                onChange={e => setFilterAccountId(e.target.value)}
+                onChange={e => { setFilterAccountId(e.target.value); setFilterCardId(''); }}
                 className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
               >
                 <option value="">Todas las cuentas</option>
                 {accounts.map(a => (
                   <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {creditCards.length > 0 && (
+            <div className="relative w-full md:w-48">
+              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+              <select
+                value={filterCardId}
+                onChange={e => { setFilterCardId(e.target.value); setFilterAccountId(''); }}
+                className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+              >
+                <option value="">Todas las tarjetas</option>
+                {creditCards.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>

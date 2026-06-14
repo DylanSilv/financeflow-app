@@ -36,13 +36,12 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
 
   useEffect(() => {
     if (!open) return;
-    if (!card.accountId) { setTxs([]); return; }
     setLoading(true);
-    api.get<Tx[]>('/transactions', { params: { take: '8', accountId: card.accountId } })
+    api.get<Tx[]>('/transactions', { params: { take: '8', cardId: card.id } })
       .then(r => setTxs(r.data.filter(t => t.type === 'EXPENSE')))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [open, card.accountId]);
+  }, [open, card.id]);
 
   const bankLabel = getBankLabel(card.color, card.name);
   const usedPct   = card.limit > 0 ? Math.min((card.balance / card.limit) * 100, 100) : 0;

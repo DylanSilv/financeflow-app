@@ -9,6 +9,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
     const type      = req.query['type']      as string | undefined;
     const search    = req.query['search']    as string | undefined;
     const accountId = req.query['accountId'] as string | undefined;
+    const cardId    = req.query['cardId']    as string | undefined;
     const dateFrom  = req.query['dateFrom']  as string | undefined;
     const dateTo    = req.query['dateTo']    as string | undefined;
     const take      = (req.query['take']     as string) ?? '50';
@@ -18,6 +19,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
     if (type === 'INCOME' || type === 'EXPENSE') where.type = type;
     if (search)    where.title     = { contains: search };
     if (accountId) where.accountId = accountId;
+    if (cardId)    where.cardId    = cardId;
     if (dateFrom || dateTo) {
       const dateFilter: { gte?: Date; lte?: Date } = {};
       if (dateFrom) { const d = new Date(dateFrom); if (!isNaN(d.getTime())) dateFilter.gte = d; }
@@ -53,6 +55,15 @@ export const deleteTransaction = async (req: AuthRequest, res: Response) => {
     if (!tx) return res.status(404).json({ error: 'Movimiento no encontrado.' });
 
     await prisma.transaction.delete({ where: { id } });
+
+    // Revertir el saldo de la tarjeta de crédito si corresponde
+    if (tx.paymentMethod === 'CREDIT_CARD' && tx.cardId && tx.type === 'EXPENSE') {
+      await prisma.card.update({
+        where: { id: tx.cardId },
+        data:  { balanceUsed: { decrement: Number(tx.amount) } },
+      });
+    }
+
     return res.status(204).send();
   } catch (error) {
     logger.error({ err: error }, 'Error deleting transaction');
