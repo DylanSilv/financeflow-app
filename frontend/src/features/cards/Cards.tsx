@@ -69,15 +69,22 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
           </div>
         </div>
         <div className="relative z-10">
-          <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">Deuda actual</p>
-          <p className="text-2xl font-bold text-white tracking-tight">
-            ${card.balance.toLocaleString('es-UY', { minimumFractionDigits: 2 })}
-          </p>
-          {card.limit > 0 && (
-            <p className="text-white/60 text-xs mt-1">
-              Disponible: <span className="text-white/80 font-medium">${(card.limit - card.balance).toLocaleString('es-UY', { minimumFractionDigits: 2 })}</span>
-            </p>
-          )}
+          <div className="flex justify-between items-end">
+            <div>
+              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">Disponible</p>
+              <p className="text-xl font-bold text-emerald-300 tracking-tight">
+                ${card.limit > 0
+                  ? (card.limit - card.balance).toLocaleString('es-UY', { minimumFractionDigits: 2 })
+                  : '—'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">Deuda actual</p>
+              <p className="text-xl font-bold text-white tracking-tight">
+                ${card.balance.toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
           <p className="text-white/60 text-sm tracking-[0.2em] font-mono mt-3">
             •••• •••• •••• {card.lastFourDigits}
           </p>
