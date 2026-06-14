@@ -2,6 +2,18 @@
 module.exports = {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
+  safelist: [
+    // Colores de gradiente de tarjetas (vienen de la DB, Tailwind no los detecta en build)
+    'from-orange-600', 'to-orange-400',
+    'from-red-700',    'to-rose-600',
+    'from-green-700',  'to-emerald-500',
+    'from-blue-700',   'to-cyan-500',
+    'from-red-900',    'to-red-700',
+    'from-violet-700', 'to-violet-500',
+    'from-sky-500',    'to-cyan-400',
+    'from-zinc-700',   'to-zinc-500',
+    'from-yellow-500', 'to-amber-400',
+  ],
   theme: {
     extend: {
       colors: {
