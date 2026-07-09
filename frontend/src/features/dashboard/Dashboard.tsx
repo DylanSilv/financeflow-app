@@ -498,7 +498,7 @@ export default function Dashboard() {
         ) : (
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+              <ComposedChart key={chartData.length} data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradBalance" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.25} />
@@ -513,7 +513,8 @@ export default function Dashboard() {
                 <Bar dataKey="ingresos" name="Ingresos" fill="#10b981" opacity={0.7} radius={[3, 3, 0, 0]} maxBarSize={14} />
                 <Bar dataKey="gastos"   name="Gastos"   fill="#f87171" opacity={0.7} radius={[3, 3, 0, 0]} maxBarSize={14} />
                 <Area type="monotone" dataKey="balance" name="Balance" stroke="#6366f1" strokeWidth={2.5}
-                  fill="url(#gradBalance)" dot={false} activeDot={{ r: 4, fill: '#6366f1' }} />
+                  fill="url(#gradBalance)" dot={false} activeDot={{ r: 4, fill: '#6366f1' }}
+                  isAnimationActive={true} animationDuration={1200} animationEasing="ease-out" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
