@@ -16,14 +16,15 @@ model User {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  accounts      Account[]
-  loans         Loan[]
-  transfers     Transfer[]
-  transactions  Transaction[]
-  categories    Category[]
-  cards         Card[]
-  fixedExpenses FixedExpense[]
-  savingsGoals  SavingsGoal[]
+  accounts        Account[]
+  loans           Loan[]
+  transfers       Transfer[]
+  transactions    Transaction[]
+  categories      Category[]
+  cards           Card[]
+  fixedExpenses   FixedExpense[]
+  savingsGoals    SavingsGoal[]
+  monthlyHistory  MonthlyHistory[]
 }
 
 // ─── ACCOUNT ─────────────────────────────────────────────────
@@ -209,6 +210,22 @@ enum ExpenseStatus {
   PENDING
   PAID
   OVERDUE
+}
+
+// ─── MONTHLY HISTORY ─────────────────────────────────────────
+
+model MonthlyHistory {
+  id       String  @id @default(uuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year     Int
+  month    Int
+  income   Decimal @db.Decimal(10, 2)
+  expenses Decimal @db.Decimal(10, 2)
+  label    String
+
+  @@unique([userId, year, month])
+  @@index([userId])
 }
 
 // ─── SAVINGS GOAL ────────────────────────────────────────────
