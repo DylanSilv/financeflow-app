@@ -29,7 +29,7 @@ interface UseTransactionData extends State {
 const TAKE = 50;
 
 export function useTransactionData(
-  filters: { search?: string; dateFrom?: string; dateTo?: string; accountId?: string; cardId?: string } = {},
+  filters: { search?: string; dateFrom?: string; dateTo?: string; accountId?: string; cardId?: string; type?: 'INCOME' | 'EXPENSE' } = {},
 ): UseTransactionData {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -44,8 +44,9 @@ export function useTransactionData(
     if (filters.dateTo)    p['dateTo']    = filters.dateTo;
     if (filters.accountId) p['accountId'] = filters.accountId;
     if (filters.cardId)    p['cardId']    = filters.cardId;
+    if (filters.type)      p['type']      = filters.type;
     return p;
-  }, [filters.search, filters.dateFrom, filters.dateTo, filters.accountId, filters.cardId]);
+  }, [filters.search, filters.dateFrom, filters.dateTo, filters.accountId, filters.cardId, filters.type]);
 
   const doFetch = useCallback(async (skip: number, replace: boolean) => {
     setLoading(true);

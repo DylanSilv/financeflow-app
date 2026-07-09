@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, CreditCard, Trash2, ChevronDown, ArrowDownRight } from 'lucide-react';
+import { Plus, CreditCard, Trash2, ChevronDown, ArrowDownRight, ArrowUpRight, Pencil } from 'lucide-react';
 import { useCardData, Card } from '@/hooks/useCardData';
 import { AddCardModal } from './AddCardModal';
+import { EditCardModal } from './EditCardModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/axios';
@@ -29,7 +30,7 @@ function getBankLabel(color: string, name: string): string {
   return BANK_ACCENT[color] ?? name;
 }
 
-function CreditCardDetail({ card, index }: { card: Card; index: number }) {
+function CreditCardDetail({ card, index, onEdit, onDelete }: { card: Card; index: number; onEdit: (card: Card) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const [txs, setTxs]   = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,7 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
       whileHover={{ y: -4 }}
-      className="bg-[#111111] border border-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:border-zinc-700 transition-colors"
+      className="bg-[#111111] border border-zinc-800 rounded-2xl overflow-hidden shadow-lg hover:border-zinc-700 transition-colors group"
     >
       {/* Frente de la tarjeta */}
       <div className={`relative p-6 bg-gradient-to-br ${card.color} overflow-hidden min-h-[190px] flex flex-col justify-between`}>
@@ -63,9 +64,23 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
             <p className="text-white/60 text-xs font-medium uppercase tracking-widest">{bankLabel}</p>
             <p className="text-white font-semibold text-base mt-0.5">{card.name}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-white/70 text-xs font-medium">{card.brand}</span>
-            <span className="text-white/50 text-[10px]">Crédito</span>
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-white/70 text-xs font-medium">{card.brand}</span>
+              <span className="text-white/50 text-[10px]">Crédito</span>
+            </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                onClick={() => onEdit(card)} aria-label="Editar tarjeta"
+                className="p-1.5 bg-black/30 hover:bg-black/60 rounded-lg transition-all">
+                <Pencil className="w-3.5 h-3.5 text-white/80" />
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                onClick={() => onDelete(card.id)} aria-label="Eliminar tarjeta"
+                className="p-1.5 bg-black/30 hover:bg-red-500/60 rounded-lg transition-all">
+                <Trash2 className="w-3.5 h-3.5 text-white/80" />
+              </motion.button>
+            </div>
           </div>
         </div>
         <div className="relative z-10">
@@ -178,7 +193,7 @@ function CreditCardDetail({ card, index }: { card: Card; index: number }) {
   );
 }
 
-function DebitCardItem({ card, onDelete, index }: { card: Card; onDelete: () => void; index: number }) {
+function DebitCardItem({ card, onDelete, onEdit, index }: { card: Card; onDelete: () => void; onEdit: () => void; index: number }) {
   const [open,    setOpen]    = useState(false);
   const [txs,     setTxs]     = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
@@ -224,12 +239,20 @@ function DebitCardItem({ card, onDelete, index }: { card: Card; onDelete: () => 
             •••• •••• •••• {card.lastFourDigits}
           </p>
         </div>
-        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-          onClick={onDelete} aria-label="Eliminar tarjeta"
-          className="absolute top-3 right-3 z-20 p-1.5 bg-black/30 hover:bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 sm:opacity-100 transition-all"
-        >
-          <Trash2 className="w-3.5 h-3.5 text-white/80" />
-        </motion.button>
+        <div className="absolute top-3 right-3 z-20 flex gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-all">
+          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+            onClick={onEdit} aria-label="Editar tarjeta"
+            className="p-1.5 bg-black/30 hover:bg-black/60 rounded-lg transition-all"
+          >
+            <Pencil className="w-3.5 h-3.5 text-white/80" />
+          </motion.button>
+          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+            onClick={onDelete} aria-label="Eliminar tarjeta"
+            className="p-1.5 bg-black/30 hover:bg-red-500/60 rounded-lg transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-white/80" />
+          </motion.button>
+        </div>
       </div>
 
       {/* Expandible historial (igual que crédito) */}
@@ -267,7 +290,7 @@ function DebitCardItem({ card, onDelete, index }: { card: Card; onDelete: () => 
                         t.type === 'INCOME' ? 'bg-emerald-500/10' : 'bg-red-500/10'
                       }`}>
                         {t.type === 'INCOME'
-                          ? <ArrowDownRight className="w-3 h-3 text-emerald-400" />
+                          ? <ArrowUpRight className="w-3 h-3 text-emerald-400" />
                           : <ArrowDownRight className="w-3 h-3 text-red-400" />}
                       </div>
                       <div className="min-w-0">
@@ -292,8 +315,9 @@ function DebitCardItem({ card, onDelete, index }: { card: Card; onDelete: () => 
 }
 
 export const Cards = () => {
-  const { cards, loading, deleteCard, refetch } = useCardData();
+  const { cards, loading, deleteCard, updateCard, refetch } = useCardData();
   const [isModalOpen,   setIsModalOpen]   = useState(false);
+  const [editTarget,    setEditTarget]    = useState<Card | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const creditCards = cards.filter(c => c.type === 'CREDIT');
@@ -352,7 +376,9 @@ export const Cards = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {debitCards.map((card, i) => (
-                  <DebitCardItem key={card.id} card={card} index={i} onDelete={() => setPendingDelete(card.id)} />
+                  <DebitCardItem key={card.id} card={card} index={i}
+                    onEdit={() => setEditTarget(card)}
+                    onDelete={() => setPendingDelete(card.id)} />
                 ))}
               </div>
             </motion.div>
@@ -367,7 +393,9 @@ export const Cards = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {creditCards.map((card, i) => (
-                  <CreditCardDetail key={card.id} card={card} index={i} />
+                  <CreditCardDetail key={card.id} card={card} index={i}
+                    onEdit={setEditTarget}
+                    onDelete={setPendingDelete} />
                 ))}
               </div>
             </motion.div>
@@ -376,6 +404,12 @@ export const Cards = () => {
       )}
 
       <AddCardModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={refetch} />
+
+      <EditCardModal
+        card={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={updateCard}
+      />
 
       <ConfirmDialog
         isOpen={!!pendingDelete}

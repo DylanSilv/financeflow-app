@@ -53,6 +53,8 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
     setTitle(''); setAmount(''); setDate(todayISO());
     setType('EXPENSE'); setCategoryId(''); setPaymentMethod('CASH');
     setWithCuotas(false); setNumCuotas(''); setError(null);
+    setAccounts(prev => { if (prev.length > 0) setAccountId(prev[0].id); return prev; });
+    setCreditCards(prev => { if (prev.length > 0) setCardId(prev[0].id); return prev; });
   }, [isOpen]);
 
   useEffect(() => {

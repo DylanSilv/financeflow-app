@@ -53,16 +53,13 @@ export const TransactionHistory = () => {
   }, []);
 
   const bounds   = selectedMonth ? toUTCBounds(selectedMonth) : {};
-  const { transactions: allTransactions, loading, hasMore, refetch, loadMore, deleteTransaction, updateTransaction } = useTransactionData({
+  const { transactions, loading, hasMore, refetch, loadMore, deleteTransaction, updateTransaction } = useTransactionData({
     search:    searchTerm || undefined,
     accountId: filterAccountId || undefined,
     cardId:    filterCardId    || undefined,
+    type:      filterType === 'ALL' ? undefined : filterType,
     ...bounds,
   });
-
-  const transactions = filterType === 'ALL'
-    ? allTransactions
-    : allTransactions.filter(t => t.type === filterType);
 
   const prevMonth = () => setSelectedMonth(d => {
     const base = d ?? new Date();

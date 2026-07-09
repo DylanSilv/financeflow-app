@@ -108,6 +108,38 @@ export const createCard = async (req: AuthRequest, res: Response) => {
   });
 };
 
+export const updateCard = async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  const id = req.params['id'] as string;
+
+  const card = await prisma.card.findFirst({ where: { id, userId } });
+  if (!card) return res.status(404).json({ error: 'Tarjeta no encontrada.' });
+
+  const { name, brand, lastFourDigits, color, limit, accountId, statementDay, dueDay } = req.body;
+
+  const updated = await prisma.card.update({
+    where: { id },
+    data: {
+      ...(name                       !== undefined && { name }),
+      ...(brand                      !== undefined && { brand }),
+      ...(lastFourDigits             !== undefined && { lastFourDigits }),
+      ...(color                      !== undefined && { color }),
+      ...(limit                      !== undefined && { limit: limit ? Number(limit) : null }),
+      ...(accountId                  !== undefined && { accountId: accountId || null }),
+      ...(statementDay               !== undefined && { statementDay: statementDay ? parseInt(statementDay, 10) : null }),
+      ...(dueDay                     !== undefined && { dueDay:        dueDay       ? parseInt(dueDay,       10) : null }),
+    },
+  });
+
+  return res.json({
+    ...updated,
+    limit:        N(updated.limit),
+    balanceUsed:  N(updated.balanceUsed),
+    statementDay: updated.statementDay ?? null,
+    dueDay:       updated.dueDay       ?? null,
+  });
+};
+
 export const deleteCard = async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   const id = req.params['id'] as string;

@@ -277,7 +277,7 @@ export const getEvolucionPatrimonial = async (req: AuthRequest, res: Response) =
     const d     = new Date(tx.date);
     const year  = d.getUTCFullYear();
     const month = d.getUTCMonth() + 1;
-    const key   = `${year}-${String(month).padStart(2, '00')}`;
+    const key   = `${year}-${String(month).padStart(2, '0')}`;
 
     // Saltar meses cubiertos por el historial JSON (están completos)
     if (historicalKeys.has(key)) continue;

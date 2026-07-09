@@ -25,6 +25,7 @@ interface State {
 interface UseCardData extends State {
   refetch:    () => void;
   deleteCard: (id: string) => Promise<void>;
+  updateCard: (id: string, data: Partial<Pick<Card, 'name' | 'brand' | 'lastFourDigits' | 'color' | 'limit' | 'accountId' | 'statementDay' | 'dueDay'>>) => Promise<void>;
 }
 
 export function useCardData(): UseCardData {
@@ -50,5 +51,10 @@ export function useCardData(): UseCardData {
     }));
   }, []);
 
-  return { ...state, refetch: fetchAll, deleteCard };
+  const updateCard = useCallback(async (id: string, data: object) => {
+    await api.patch(`/cards/${id}`, data);
+    await fetchAll();
+  }, [fetchAll]);
+
+  return { ...state, refetch: fetchAll, deleteCard, updateCard };
 }
