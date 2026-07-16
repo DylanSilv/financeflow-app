@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CreditCard as CardIcon, Check } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface Account { id: string; name: string; type: string; }
 
@@ -35,10 +36,12 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [accounts,      setAccounts]      = useState<Account[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
+  const user = useAuthStore(s => s.user);
 
   useEffect(() => {
     if (isOpen) {
-      api.get<Account[]>('/accounts').then(r => setAccounts(r.data)).catch(() => {});
+      supabase.from('Account').select('id, name, type').eq('isArchived', false).order('name')
+        .then(({ data }) => setAccounts(data ?? []), () => {});
     }
   }, [isOpen]);
 
@@ -62,17 +65,19 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     setLoading(true);
     try {
-      await api.post('/cards', {
+      const { error: err } = await supabase.from('Card').insert({
         name,
         type,
         brand,
         lastFourDigits: lastFour.slice(-4),
         color:          selectedBank.gradient,
-        limit:          type === 'CREDIT' ? parseFloat(limit) : 0,
-        accountId:      accountId || undefined,
-        statementDay:   type === 'CREDIT' && statementDay ? parseInt(statementDay, 10) : undefined,
-        dueDay:         type === 'CREDIT' && dueDay       ? parseInt(dueDay, 10)       : undefined,
+        limit:          type === 'CREDIT' ? parseFloat(limit) : null,
+        accountId:      accountId || null,
+        statementDay:   type === 'CREDIT' && statementDay ? parseInt(statementDay, 10) : null,
+        dueDay:         type === 'CREDIT' && dueDay       ? parseInt(dueDay, 10)       : null,
+        userId:         user!.id,
       });
+      if (err) throw err;
 
       setSelectedBank(null); setName('');
       setLimit(''); setLastFour('');

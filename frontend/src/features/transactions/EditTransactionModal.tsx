@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import { Transaction } from '@/hooks/useTransactionData';
 
 interface ApiCategory { id: string; name: string; color: string | null; }
@@ -36,7 +36,8 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
   const [error,         setError]         = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<ApiCategory[]>('/categories').then(r => setCategories(r.data)).catch(() => {});
+    supabase.from('Category').select('id, name, color').order('name')
+      .then(({ data }) => setCategories(data ?? []), () => {});
   }, []);
 
   useEffect(() => {

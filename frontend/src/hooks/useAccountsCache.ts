@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 export interface AccountOption { id: string; name: string; type: string; }
 
-// Caché de módulo compartida entre todos los componentes que usan esta hook
 let _cache: AccountOption[] | null = null;
 let _lastFetch = 0;
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutos
+const CACHE_TTL = 2 * 60 * 1000;
 
 export function invalidateAccountsCache() {
   _cache = null;
@@ -24,14 +23,18 @@ export function useAccountsCache() {
       return;
     }
     setLoading(true);
-    api.get<AccountOption[]>('/accounts')
-      .then(r => {
-        _cache      = r.data;
-        _lastFetch  = Date.now();
-        setAccounts(r.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('Account')
+          .select('id, name, type')
+          .eq('isArchived', false)
+          .order('name');
+        _cache     = (data ?? []) as AccountOption[];
+        _lastFetch = Date.now();
+        setAccounts(_cache);
+      } catch { /* silencioso */ } finally { setLoading(false); }
+    })();
   }, []);
 
   return { accounts, loading };

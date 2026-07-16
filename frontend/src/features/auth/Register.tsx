@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Eye, EyeOff, TrendingUp, Shield, Layers } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 
 function getGreeting(name: string): string {
@@ -36,7 +36,7 @@ export const Register = () => {
   const [loading,         setLoading]         = useState(false);
   const [welcome,         setWelcome]         = useState<string | null>(null);
 
-  const setAuth  = useAuthStore(s => s.setAuth);
+  const setUser  = useAuthStore(s => s.setUser);
   const navigate = useNavigate();
 
   const validate = (): string => {
@@ -60,17 +60,28 @@ export const Register = () => {
     if (validationError) { setError(validationError); return; }
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/register', {
-        name:     name.trim(),
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email:    email.trim().toLowerCase(),
         password,
+        options:  { data: { name: name.trim() } },
       });
-      setAuth(data.user, data.token);
-      setWelcome(getGreeting(data.user.name));
+      if (signUpError) throw signUpError;
+
+      if (!signUpData.session) {
+        setError('Revisá tu correo para confirmar tu cuenta antes de iniciar sesión.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase.from('User').select('id, name, email').single();
+      if (!profile) throw new Error('No se pudo obtener el perfil de usuario.');
+
+      setUser(profile);
+      setWelcome(getGreeting(profile.name));
       await new Promise(r => setTimeout(r, 1600));
       navigate('/', { replace: true });
     } catch (err: any) {
-      setError(err.response?.data?.error ?? 'No se pudo crear la cuenta. Intentá de nuevo.');
+      setError(err.message ?? 'No se pudo crear la cuenta. Intentá de nuevo.');
       setLoading(false);
     }
   };

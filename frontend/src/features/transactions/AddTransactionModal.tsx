@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 interface Account     { id: string; name: string; type: string; }
 interface ApiCategory { id: string; name: string; color: string | null; }
@@ -58,19 +58,16 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   }, [isOpen]);
 
   useEffect(() => {
-    api.get<Account[]>('/accounts').then(r => {
-      setAccounts(r.data);
-      if (r.data.length > 0) setAccountId(r.data[0].id);
-    }).catch(() => {});
-    api.get<ApiCategory[]>('/categories').then(r => {
-      setCategories(r.data);
-      if (r.data.length > 0) setCategoryId(r.data[0].id);
-    }).catch(() => {});
-    api.get<CardOption[]>('/cards').then(r => {
-      const credit = r.data.filter(c => c.type === 'CREDIT');
-      setCreditCards(credit);
-      if (credit.length > 0) setCardId(credit[0].id);
-    }).catch(() => {});
+    supabase.from('Account').select('id, name, type').eq('isArchived', false).order('name')
+      .then(({ data }) => { setAccounts(data ?? []); if (data?.length) setAccountId(data[0].id); }, () => {});
+    supabase.from('Category').select('id, name, color').order('name')
+      .then(({ data }) => { setCategories(data ?? []); if (data?.length) setCategoryId(data[0].id); }, () => {});
+    supabase.from('Card').select('id, name, type, dueDay').order('name')
+      .then(({ data }) => {
+        const credit = (data ?? []).filter((c: any) => c.type === 'CREDIT');
+        setCreditCards(credit);
+        if (credit.length) setCardId(credit[0].id);
+      }, () => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,30 +105,30 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     setLoading(true);
     try {
-      await api.post('/transactions', {
-        title,
-        amount:        parsedAmount,
-        type,
-        date:          toUTCNoon(date),
-        paymentMethod,
-        categoryId:    categoryId || undefined,
-        ...(paymentMethod === 'CREDIT_CARD'
-          ? { cardId:    cardId    || undefined }
-          : { accountId: accountId || undefined }),
+      const { error: txErr } = await supabase.rpc('create_transaction', {
+        p_title:          title,
+        p_amount:         parsedAmount,
+        p_date:           toUTCNoon(date),
+        p_type:           type,
+        p_payment_method: paymentMethod,
+        p_category_id:    categoryId || null,
+        p_card_id:        paymentMethod === 'CREDIT_CARD' ? (cardId || null) : null,
+        p_account_id:     paymentMethod !== 'CREDIT_CARD' ? (accountId || null) : null,
       });
+      if (txErr) throw txErr;
 
       if (parsedCuotas >= 2 && paymentMethod === 'CREDIT_CARD') {
         const installmentAmount = parsedAmount / parsedCuotas;
         const selectedCard = creditCards.find(c => c.id === cardId);
         const dueDate = selectedCard?.dueDay ?? 10;
-        await api.post('/fixed-expenses', {
-          name:              `Cuotas: ${title}`,
-          amount:            installmentAmount,
-          dueDate,
-          hasInstallments:   true,
-          totalInstallments: parsedCuotas,
-          paidInstallments:  0,
+        const { error: feErr } = await supabase.rpc('create_fixed_expense_with_loan', {
+          p_name:               `Cuotas: ${title}`,
+          p_amount:             installmentAmount,
+          p_due_date:           dueDate,
+          p_total_installments: parsedCuotas,
+          p_paid_installments:  0,
         });
+        if (feErr) throw feErr;
       }
 
       onClose();

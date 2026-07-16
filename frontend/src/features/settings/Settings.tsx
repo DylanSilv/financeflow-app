@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Shield, Bell, Globe, ChevronRight, LogOut, Eye, EyeOff, Check } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 16 },
@@ -122,16 +122,25 @@ export default function Settings() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwError(null);
-    if (next.length < 8)  { setPwError('La nueva contraseña debe tener al menos 8 caracteres.'); return; }
-    if (next !== confirm)  { setPwError('Las contraseñas nuevas no coinciden.'); return; }
+    if (next.length < 8) { setPwError('La nueva contraseña debe tener al menos 8 caracteres.'); return; }
+    if (next !== confirm) { setPwError('Las contraseñas nuevas no coinciden.'); return; }
 
     setPwLoading(true);
     try {
-      await api.patch('/auth/password', { currentPassword: current, newPassword: next });
+      // Re-autenticar con la contraseña actual antes de cambiarla
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email:    user?.email ?? '',
+        password: current,
+      });
+      if (signInError) { setPwError('La contraseña actual es incorrecta.'); return; }
+
+      const { error } = await supabase.auth.updateUser({ password: next });
+      if (error) throw error;
+
       setPwSuccess(true);
       setTimeout(() => { setPwOpen(false); resetPwForm(); }, 1800);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const msg = (err as { message?: string })?.message;
       setPwError(msg ?? 'No se pudo cambiar la contraseña.');
     } finally {
       setPwLoading(false);
@@ -141,7 +150,7 @@ export default function Settings() {
   const handleLogout = async () => {
     setLoggingOut(true);
     await new Promise(r => setTimeout(r, 500));
-    logout();
+    await logout();
     navigate('/login', { replace: true });
   };
 

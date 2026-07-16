@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 export interface Card {
   id:             string;
@@ -9,7 +9,7 @@ export interface Card {
   lastFourDigits: string;
   color:          string;
   limit:          number;
-  balance:        number;  // DEBIT: saldo disponible de la cuenta | CREDIT: deuda actual (balanceUsed)
+  balance:        number;
   balanceUsed:    number;
   accountId:      string | null;
   statementDay:   number | null;
@@ -34,8 +34,25 @@ export function useCardData(): UseCardData {
   const fetchAll = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const { data } = await api.get<Card[]>('/cards');
-      setState({ cards: data, loading: false, error: null });
+      const { data, error } = await supabase.rpc('get_cards');
+      if (error) throw error;
+
+      const cards: Card[] = ((data as any[]) ?? []).map((c: any) => ({
+        id:             c.id,
+        name:           c.name,
+        type:           c.type,
+        brand:          c.brand ?? 'VISA',
+        lastFourDigits: c.lastFourDigits ?? '0000',
+        color:          c.color ?? 'from-zinc-900 to-zinc-700',
+        limit:          Number(c.limit ?? 0),
+        balance:        Number(c.balance ?? 0),
+        balanceUsed:    Number(c.balanceUsed ?? 0),
+        accountId:      c.accountId ?? null,
+        statementDay:   c.statementDay ?? null,
+        dueDay:         c.dueDay ?? null,
+      }));
+
+      setState({ cards, loading: false, error: null });
     } catch {
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar tarjetas.' }));
     }
@@ -44,15 +61,12 @@ export function useCardData(): UseCardData {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const deleteCard = useCallback(async (id: string) => {
-    await api.delete(`/cards/${id}`);
-    setState(prev => ({
-      ...prev,
-      cards: prev.cards.filter(c => c.id !== id),
-    }));
+    await supabase.from('Card').delete().eq('id', id);
+    setState(prev => ({ ...prev, cards: prev.cards.filter(c => c.id !== id) }));
   }, []);
 
   const updateCard = useCallback(async (id: string, data: object) => {
-    await api.patch(`/cards/${id}`, data);
+    await supabase.from('Card').update(data).eq('id', id);
     await fetchAll();
   }, [fetchAll]);
 

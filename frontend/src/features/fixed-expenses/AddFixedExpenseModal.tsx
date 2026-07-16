@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CalendarDays, Hash, RefreshCw } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import { Toggle } from '@/components/ui/Toggle';
 
 interface Account { id: string; name: string; type: string; }
@@ -26,10 +26,8 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [error,             setError]             = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Account[]>('/accounts').then(r => {
-      setAccounts(r.data);
-      if (r.data.length > 0) setAccountId(r.data[0].id);
-    }).catch(() => {});
+    supabase.from('Account').select('id, name, type').eq('isArchived', false).order('name')
+      .then(({ data }) => { setAccounts(data ?? []); if (data?.length) setAccountId(data[0].id); }, () => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,16 +54,16 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     setLoading(true);
     try {
-      await api.post('/fixed-expenses', {
-        name,
-        amount:            parseFloat(amount),
-        dueDate:           parseInt(dueDate, 10),
-        autoPay,
-        accountId:         autoPay ? (accountId || null) : null,
-        hasInstallments,
-        totalInstallments: hasInstallments ? parseInt(totalInstallments, 10) : undefined,
-        paidInstallments:  hasInstallments ? parseInt(paidInstallments,  10) : undefined,
+      const { error } = await supabase.rpc('create_fixed_expense_with_loan', {
+        p_name:               name,
+        p_amount:             parseFloat(amount),
+        p_due_date:           parseInt(dueDate, 10),
+        p_auto_pay:           autoPay,
+        p_account_id:         autoPay ? (accountId || null) : null,
+        p_total_installments: hasInstallments ? parseInt(totalInstallments, 10) : null,
+        p_paid_installments:  hasInstallments ? parseInt(paidInstallments,  10) : 0,
       });
+      if (error) throw error;
 
       setName(''); setAmount(''); setDueDate('1');
       setAutoPay(false); setHasInstallments(false);

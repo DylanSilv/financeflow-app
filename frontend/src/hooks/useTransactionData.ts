@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 export interface Transaction {
   id:            string;
@@ -23,7 +23,7 @@ interface UseTransactionData extends State {
   refetch:           () => void;
   loadMore:          () => void;
   deleteTransaction: (id: string) => Promise<void>;
-  updateTransaction: (id: string, updates: Partial<Pick<Transaction, 'title' | 'amount' | 'date' | 'type' | 'paymentMethod'>> & { categoryName?: string; categoryColor?: string }) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Pick<Transaction, 'title' | 'amount' | 'date' | 'type' | 'paymentMethod'>> & { categoryId?: string | null }) => Promise<void>;
 }
 
 const TAKE = 50;
@@ -37,41 +37,55 @@ export function useTransactionData(
   const [hasMore,      setHasMore]      = useState(false);
   const [currentSkip,  setCurrentSkip]  = useState(0);
 
-  const buildParams = useCallback((skip: number): Record<string, string> => {
-    const p: Record<string, string> = { take: String(TAKE), skip: String(skip) };
-    if (filters.search)    p['search']    = filters.search;
-    if (filters.dateFrom)  p['dateFrom']  = filters.dateFrom;
-    if (filters.dateTo)    p['dateTo']    = filters.dateTo;
-    if (filters.accountId) p['accountId'] = filters.accountId;
-    if (filters.cardId)    p['cardId']    = filters.cardId;
-    if (filters.type)      p['type']      = filters.type;
-    return p;
-  }, [filters.search, filters.dateFrom, filters.dateTo, filters.accountId, filters.cardId, filters.type]);
+  const buildQuery = useCallback((skip: number) => {
+    let q = supabase
+      .from('Transaction')
+      .select('id, title, amount, date, type, paymentMethod, accountId, category:Category(id, name, color)')
+      .order('date', { ascending: false })
+      .range(skip, skip + TAKE - 1);
+
+    if (filters.type)      q = q.eq('type', filters.type);
+    if (filters.accountId) q = q.eq('accountId', filters.accountId);
+    if (filters.cardId)    q = q.eq('cardId', filters.cardId);
+    if (filters.dateFrom)  q = q.gte('date', filters.dateFrom);
+    if (filters.dateTo)    q = q.lte('date', filters.dateTo);
+    if (filters.search)    q = q.ilike('title', `%${filters.search}%`);
+    return q;
+  }, [filters.search, filters.dateFrom, filters.dateTo, filters.accountId, filters.cardId, filters.type]); // eslint-disable-line
 
   const doFetch = useCallback(async (skip: number, replace: boolean) => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<Transaction[]>('/transactions', { params: buildParams(skip) });
-      setTransactions(prev => replace ? data : [...prev, ...data]);
-      setHasMore(data.length === TAKE);
+      const { data, error: err } = await buildQuery(skip);
+      if (err) throw err;
+
+      const rows: Transaction[] = (data ?? []).map((t: any) => ({
+        id:            t.id,
+        title:         t.title,
+        amount:        Number(t.amount),
+        date:          t.date,
+        type:          t.type,
+        paymentMethod: t.paymentMethod,
+        category:      t.category ?? null,
+        accountId:     t.accountId ?? null,
+      }));
+
+      setTransactions(prev => replace ? rows : [...prev, ...rows]);
+      setHasMore(rows.length === TAKE);
     } catch {
       setError('Error al cargar movimientos.');
     } finally {
       setLoading(false);
     }
-  }, [buildParams]);
+  }, [buildQuery]);
 
   useEffect(() => {
     setCurrentSkip(0);
     doFetch(0, true);
   }, [doFetch]);
 
-  const refetch = useCallback(() => {
-    setCurrentSkip(0);
-    doFetch(0, true);
-  }, [doFetch]);
-
+  const refetch  = useCallback(() => { setCurrentSkip(0); doFetch(0, true); }, [doFetch]);
   const loadMore = useCallback(() => {
     const next = currentSkip + TAKE;
     setCurrentSkip(next);
@@ -79,13 +93,17 @@ export function useTransactionData(
   }, [currentSkip, doFetch]);
 
   const deleteTransaction = useCallback(async (id: string) => {
-    await api.delete(`/transactions/${id}`);
+    await supabase.rpc('delete_transaction', { p_tx_id: id });
     setTransactions(prev => prev.filter(t => t.id !== id));
   }, []);
 
   const updateTransaction = useCallback(async (id: string, updates: Parameters<UseTransactionData['updateTransaction']>[1]) => {
-    const { data } = await api.patch<Transaction>(`/transactions/${id}`, updates);
-    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+    const { error: err } = await supabase
+      .from('Transaction')
+      .update({ ...updates, updatedAt: new Date().toISOString() })
+      .eq('id', id);
+    if (err) throw err;
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   }, []);
 
   return { transactions, loading, error, hasMore, refetch, loadMore, deleteTransaction, updateTransaction };

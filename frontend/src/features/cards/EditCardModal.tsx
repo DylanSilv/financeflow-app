@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CreditCard as CardIcon, Check } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import type { Card } from '@/hooks/useCardData';
 
 interface Account { id: string; name: string; type: string; }
@@ -53,7 +53,8 @@ export const EditCardModal = ({ card, onClose, onSave }: Props) => {
     setStatementDay(card.statementDay ? String(card.statementDay) : '');
     setDueDay(card.dueDay ? String(card.dueDay) : '');
     setError(null);
-    api.get<Account[]>('/accounts').then(r => setAccounts(r.data)).catch(() => {});
+    supabase.from('Account').select('id, name, type').eq('isArchived', false).order('name')
+      .then(({ data }) => setAccounts(data ?? []), () => {});
   }, [card]);
 
   const handleSubmit = async (e: React.FormEvent) => {

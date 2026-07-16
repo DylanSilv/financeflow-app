@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Tag, Check } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Category } from '@/hooks/useCategoryData';
 
 const COLORS = [
@@ -28,6 +29,7 @@ interface Props {
 
 export const CategoryModal = ({ isOpen, onClose, onSuccess, category }: Props) => {
   const isEdit = !!category;
+  const user   = useAuthStore(s => s.user);
   const [name,    setName]    = useState('');
   const [color,   setColor]   = useState(COLORS[0].hex);
   const [loading, setLoading] = useState(false);
@@ -51,14 +53,16 @@ export const CategoryModal = ({ isOpen, onClose, onSuccess, category }: Props) =
     setLoading(true);
     try {
       if (isEdit) {
-        await api.patch(`/categories/${category!.id}`, { name: name.trim(), color });
+        const { error } = await supabase.from('Category').update({ name: name.trim(), color }).eq('id', category!.id);
+        if (error) throw error;
       } else {
-        await api.post('/categories', { name: name.trim(), color });
+        const { error } = await supabase.from('Category').insert({ name: name.trim(), color, userId: user!.id });
+        if (error) throw error;
       }
       onClose();
       onSuccess?.();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const msg = (err as { message?: string })?.message;
       setError(msg ?? 'No se pudo guardar la categoría.');
     } finally {
       setLoading(false);

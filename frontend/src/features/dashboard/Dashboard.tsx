@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom';
 import { useDashboardData, AccountBalance, ActiveLoan, SavingsGoal, CategoryExpense } from '@/hooks/useDashboardData';
 import { useAnimatedNumber } from '@/hooks/useAnimatedNumber';
 import { useAuthStore } from '@/store/useAuthStore';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 // ─── Formatting ──────────────────────────────────────────────
 
@@ -312,9 +312,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (autoPayRan.current) return;
     autoPayRan.current = true;
-    api.post<{ paid: { id: string; name: string; amount: number }[]; count: number }>('/fixed-expenses/autopay')
-      .then(r => { if (r.data.count > 0) { setAutoPayResult(r.data.paid); refetch(); } })
-      .catch(() => {});
+    supabase.rpc('run_autopay')
+      .then(({ data }) => {
+        const r = data as { paid: { id: string; name: string; amount: number }[]; count: number };
+        if (r?.count > 0) { setAutoPayResult(r.paid); refetch(); }
+      }, () => {});
   }, [refetch]);
 
   const now = new Date();
@@ -341,11 +343,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     setCatLoading(true);
-    const params = catMode === 'month' ? `?year=${catYear}&month=${catMonth}` : '';
-    api.get(`/dashboard/gastos-categoria${params}`)
-      .then(r => setGastosCategorias(r.data))
-      .catch(() => {})
-      .finally(() => setCatLoading(false));
+    const params = catMode === 'month'
+      ? { p_year: catYear, p_month: catMonth }
+      : {};
+    void (async () => {
+      try {
+        const { data } = await supabase.rpc('get_gastos_por_categoria', params);
+        setGastosCategorias(data as any);
+      } catch { /* silencioso */ } finally { setCatLoading(false); }
+    })();
   }, [catMode, catYear, catMonth]);
 
   const mIncome   = balanceTotal?.monthIncome   ?? 0;

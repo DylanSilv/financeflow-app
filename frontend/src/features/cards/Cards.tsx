@@ -6,7 +6,7 @@ import { AddCardModal } from './AddCardModal';
 import { EditCardModal } from './EditCardModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 16 },
@@ -38,10 +38,18 @@ function CreditCardDetail({ card, index, onEdit, onDelete }: { card: Card; index
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    api.get<Tx[]>('/transactions', { params: { take: '8', cardId: card.id } })
-      .then(r => setTxs(r.data.filter(t => t.type === 'EXPENSE')))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('Transaction')
+          .select('id, title, amount, date, type, paymentMethod')
+          .eq('cardId', card.id)
+          .eq('type', 'EXPENSE')
+          .order('date', { ascending: false })
+          .limit(8);
+        setTxs((data ?? []).map((t: any) => ({ ...t, amount: Number(t.amount) })));
+      } catch { /* silencioso */ } finally { setLoading(false); }
+    })();
   }, [open, card.id]);
 
   const bankLabel = getBankLabel(card.color, card.name);
@@ -201,10 +209,17 @@ function DebitCardItem({ card, onDelete, onEdit, index }: { card: Card; onDelete
   useEffect(() => {
     if (!open || !card.accountId) return;
     setLoading(true);
-    api.get<Tx[]>('/transactions', { params: { take: '8', accountId: card.accountId } })
-      .then(r => setTxs(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('Transaction')
+          .select('id, title, amount, date, type, paymentMethod')
+          .eq('accountId', card.accountId)
+          .order('date', { ascending: false })
+          .limit(8);
+        setTxs((data ?? []).map((t: any) => ({ ...t, amount: Number(t.amount) })));
+      } catch { /* silencioso */ } finally { setLoading(false); }
+    })();
   }, [open, card.accountId]);
 
   const bankLabel = getBankLabel(card.color, card.name);

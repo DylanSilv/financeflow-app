@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Toggle } from '@/components/ui/Toggle';
 
 interface Props {
@@ -21,6 +22,7 @@ const GOAL_COLORS = [
 ];
 
 export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
+  const user = useAuthStore(s => s.user);
   const [name,          setName]          = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [hasTarget,     setHasTarget]     = useState(false);
@@ -49,13 +51,15 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     setLoading(true);
     try {
-      await api.post('/savings', {
+      const { error } = await supabase.from('SavingsGoal').insert({
         name,
         currentAmount: currentAmount ? parseFloat(currentAmount) : 0,
         targetAmount:  hasTarget && targetAmount ? parseFloat(targetAmount) : 0,
         deadline:      hasTarget && deadline ? deadline : null,
         color,
+        userId:        user!.id,
       });
+      if (error) throw error;
 
       setName(''); setCurrentAmount(''); setTargetAmount('');
       setDeadline(''); setHasTarget(false);

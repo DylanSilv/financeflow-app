@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { TrendingUp, Shield, Layers, Eye, EyeOff } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 
 function getGreeting(name: string): string {
@@ -35,7 +35,7 @@ export const Login = () => {
   const [welcome,        setWelcome]        = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  const setAuth  = useAuthStore(s => s.setAuth);
+  const setUser  = useAuthStore(s => s.setUser);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,13 +51,18 @@ export const Login = () => {
     setError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', { email, password });
-      setAuth(data.user, data.token);
-      setWelcome(getGreeting(data.user.name));
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
+      const { data: profile } = await supabase.from('User').select('id, name, email').single();
+      if (!profile) throw new Error('No se encontró el perfil de usuario.');
+
+      setUser(profile);
+      setWelcome(getGreeting(profile.name));
       await new Promise(r => setTimeout(r, 1600));
       navigate('/', { replace: true });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Credenciales incorrectas.');
+      setError(err.message || 'Credenciales incorrectas.');
       setLoading(false);
     }
   };

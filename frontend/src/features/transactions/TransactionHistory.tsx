@@ -9,7 +9,7 @@ import { Search, ArrowDownRight, ArrowUpRight, Trash2, Plus, Filter, Pencil, Che
 import { AddTransferModal } from './AddTransferModal';
 import { useTransferData } from '@/hooks/useTransferData';
 import { useAccountsCache } from '@/hooks/useAccountsCache';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import type { Transaction } from '@/hooks/useTransactionData';
 
 const fadeUp = (delay = 0) => ({
@@ -47,9 +47,8 @@ export const TransactionHistory = () => {
   const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
 
   useEffect(() => {
-    api.get<{ id: string; name: string; type: string }[]>('/cards')
-      .then(r => setCreditCards(r.data.filter(c => c.type === 'CREDIT')))
-      .catch(() => {});
+    supabase.from('Card').select('id, name, type').order('name')
+      .then(({ data }) => setCreditCards((data ?? []).filter((c: any) => c.type === 'CREDIT')), () => {});
   }, []);
 
   const bounds   = selectedMonth ? toUTCBounds(selectedMonth) : {};

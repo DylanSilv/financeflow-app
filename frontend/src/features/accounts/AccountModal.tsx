@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Landmark, Check } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Account } from '@/hooks/useAccountData';
 
 const COLORS = [
@@ -33,6 +34,7 @@ const INPUT_CLS = 'w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py
 
 export const AccountModal = ({ isOpen, onClose, onSuccess, account }: Props) => {
   const isEdit = !!account;
+  const user   = useAuthStore(s => s.user);
 
   const [name,    setName]    = useState('');
   const [type,    setType]    = useState<'CHECKING' | 'SAVINGS' | 'CASH' | 'BENEFIT'>('CHECKING');
@@ -68,14 +70,16 @@ export const AccountModal = ({ isOpen, onClose, onSuccess, account }: Props) => 
     setLoading(true);
     try {
       if (isEdit) {
-        await api.patch(`/accounts/${account!.id}`, payload);
+        const { error } = await supabase.from('Account').update(payload).eq('id', account!.id);
+        if (error) throw error;
       } else {
-        await api.post('/accounts', payload);
+        const { error } = await supabase.from('Account').insert({ ...payload, userId: user!.id });
+        if (error) throw error;
       }
       onClose();
       onSuccess?.();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const msg = (err as { message?: string })?.message;
       setError(msg ?? 'No se pudo guardar la cuenta.');
     } finally {
       setLoading(false);

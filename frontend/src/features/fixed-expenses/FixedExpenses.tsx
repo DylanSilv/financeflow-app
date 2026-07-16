@@ -6,7 +6,7 @@ import { AddFixedExpenseModal } from './AddFixedExpenseModal';
 import { EditFixedExpenseModal } from './EditFixedExpenseModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 
 interface AutoPayResult {
   count: number;
@@ -30,7 +30,8 @@ interface CardOption {
 function useCards() {
   const [cards, setCards] = useState<CardOption[]>([]);
   useEffect(() => {
-    api.get<CardOption[]>('/cards').then(r => setCards(r.data)).catch(() => {});
+    supabase.rpc('get_cards')
+      .then(({ data }) => setCards((data as CardOption[]) ?? []), () => {});
   }, []);
   return cards;
 }
@@ -325,7 +326,7 @@ function ExpenseRow({
 // ─── Página principal ─────────────────────────────────────────
 
 export const FixedExpenses = () => {
-  const { expenses, loading, updateExpense, toggleAutoPay, deleteExpense, refetch } = useFixedExpenseData();
+  const { expenses, loading, updateExpense, toggleAutoPay, deleteExpense, refetch, markAsPaid, runAutoPay: _runAutoPay } = useFixedExpenseData();
   const [isModalOpen,    setIsModalOpen]    = useState(false);
   const [editTarget,     setEditTarget]     = useState<FixedExpense | null>(null);
   const [pendingDelete,  setPendingDelete]  = useState<string | null>(null);
@@ -338,13 +339,12 @@ export const FixedExpenses = () => {
     if (autoPayLoading) return;
     setAutoPayLoading(true);
     try {
-      const res = await api.post<AutoPayResult>('/fixed-expenses/autopay');
-      if (res.data.count > 0 || manual) {
-        setAutoPayResult(res.data);
-        if (res.data.count > 0) refetch();
+      const result = await _runAutoPay();
+      if (result.count > 0 || manual) {
+        setAutoPayResult(result);
+        if (result.count > 0) refetch();
       }
     } catch {
-      // silencioso en auto; en manual mostrar resultado vacío
       if (manual) setAutoPayResult({ count: 0, paid: [] });
     } finally {
       setAutoPayLoading(false);
@@ -359,7 +359,7 @@ export const FixedExpenses = () => {
   }, []);
 
   const handlePay = async (id: string, accountId?: string) => {
-    await api.patch(`/fixed-expenses/${id}/pay`, accountId ? { accountId } : {});
+    await markAsPaid(id, accountId);
     refetch();
   };
 

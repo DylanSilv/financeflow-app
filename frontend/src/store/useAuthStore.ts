@@ -1,46 +1,45 @@
 import { create } from 'zustand';
+import { supabase } from '@/lib/supabase';
 
-interface User {
+interface AppUser {
   id: string;
   name: string;
   email: string;
 }
 
 interface AuthState {
-  user: User | null;
-  token: string | null;
+  user: AppUser | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string) => void;
-  logout: () => void;
+  isLoading: boolean;
+  setUser: (user: AppUser | null) => void;
+  logout: () => Promise<void>;
 }
 
-function loadUser(): User | null {
-  try {
-    return JSON.parse(localStorage.getItem('financeflow_user') ?? 'null');
-  } catch {
-    return null;
+export const useAuthStore = create<AuthState>((set) => ({
+  user:            null,
+  isAuthenticated: false,
+  isLoading:       true,
+
+  setUser: (user) => set({ user, isAuthenticated: !!user, isLoading: false }),
+
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ user: null, isAuthenticated: false, isLoading: false });
+  },
+}));
+
+async function loadProfile() {
+  const { data } = await supabase.from('User').select('id, name, email').single();
+  return data as AppUser | null;
+}
+
+// Inicializa el listener de auth cuando se importa el módulo.
+// onAuthStateChange dispara INITIAL_SESSION al arrancar con la sesión actual (o null).
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  if (session) {
+    const profile = await loadProfile();
+    useAuthStore.setState({ user: profile, isAuthenticated: !!profile, isLoading: false });
+  } else {
+    useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
   }
-}
-
-export const useAuthStore = create<AuthState>((set) => {
-  const storedToken = localStorage.getItem('financeflow_token');
-  const storedUser  = loadUser();
-
-  return {
-    user:            storedUser,
-    token:           storedToken,
-    isAuthenticated: !!storedToken,
-
-    setAuth: (user, token) => {
-      localStorage.setItem('financeflow_token', token);
-      localStorage.setItem('financeflow_user',  JSON.stringify(user));
-      set({ user, token, isAuthenticated: true });
-    },
-
-    logout: () => {
-      localStorage.removeItem('financeflow_token');
-      localStorage.removeItem('financeflow_user');
-      set({ user: null, token: null, isAuthenticated: false });
-    },
-  };
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil, RefreshCw } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { supabase } from '@/lib/supabase';
 import { FixedExpense } from '@/hooks/useFixedExpenseData';
 import { Toggle } from '@/components/ui/Toggle';
 
@@ -26,7 +26,8 @@ export const EditFixedExpenseModal = ({ expense, onClose, onSave }: Props) => {
   const [error,     setError]     = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Account[]>('/accounts').then(r => setAccounts(r.data)).catch(() => {});
+    supabase.from('Account').select('id, name, type').eq('isArchived', false).order('name')
+      .then(({ data }) => setAccounts(data ?? []), () => {});
   }, []);
 
   useEffect(() => {
