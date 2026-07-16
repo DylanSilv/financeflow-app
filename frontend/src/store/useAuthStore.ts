@@ -28,18 +28,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-async function loadProfile() {
-  const { data } = await supabase.from('User').select('id, name, email').single();
-  return data as AppUser | null;
+async function loadProfile(): Promise<AppUser | null> {
+  try {
+    const { data } = await supabase.from('User').select('id, name, email').single();
+    return data as AppUser | null;
+  } catch {
+    return null;
+  }
 }
 
 // Inicializa el listener de auth cuando se importa el módulo.
 // onAuthStateChange dispara INITIAL_SESSION al arrancar con la sesión actual (o null).
 supabase.auth.onAuthStateChange(async (_event, session) => {
-  if (session) {
-    const profile = await loadProfile();
-    useAuthStore.setState({ user: profile, isAuthenticated: !!profile, isLoading: false });
-  } else {
+  try {
+    if (session) {
+      const profile = await loadProfile();
+      useAuthStore.setState({ user: profile, isAuthenticated: !!profile, isLoading: false });
+    } else {
+      useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
+    }
+  } catch {
+    // Si falla cualquier cosa, deslogueamos y mostramos landing
     useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
   }
 });
