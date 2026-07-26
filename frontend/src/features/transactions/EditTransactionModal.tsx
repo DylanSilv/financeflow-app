@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { insufficientFundsMessage } from '@/lib/fundsError';
 import { Transaction } from '@/hooks/useTransactionData';
 
 interface ApiCategory { id: string; name: string; color: string | null; }
@@ -71,7 +72,7 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
       onClose();
     } catch (err) {
       console.error('edición de movimiento falló:', err);
-      setError('No se pudo guardar. Intentá de nuevo.');
+      setError(insufficientFundsMessage(err, 'No se pudo guardar. Intentá de nuevo.'));
     } finally {
       setLoading(false);
     }

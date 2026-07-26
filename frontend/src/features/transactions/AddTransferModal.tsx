@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight } from 'lucide-react';
+import { insufficientFundsMessage } from '@/lib/fundsError';
 import { useAccountsCache } from '@/hooks/useAccountsCache';
 
 function todayISO(): string {
@@ -52,7 +53,7 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
       handleClose();
     } catch (err) {
       console.error('alta de transferencia falló:', err);
-      setError('No se pudo registrar la transferencia. Intentá de nuevo.');
+      setError(insufficientFundsMessage(err, 'No se pudo registrar la transferencia. Intentá de nuevo.'));
     } finally {
       setLoading(false);
     }
