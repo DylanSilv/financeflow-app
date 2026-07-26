@@ -114,9 +114,6 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
         p_category_id:    categoryId || null,
         p_card_id:        paymentMethod === 'CREDIT_CARD' ? (cardId || null) : null,
         p_account_id:     paymentMethod !== 'CREDIT_CARD' ? (accountId || null) : null,
-        // Existen dos overloads de create_transaction en la base; mandar este
-        // parámetro desambigua hacia el que incluye ivaAmount (el vigente).
-        p_iva_amount:     null,
       });
       if (txErr) throw txErr;
 

@@ -126,7 +126,11 @@ export function useDashboardData(): DashboardData {
           installmentAmount: Number(l.installmentAmount),
           totalInstallments: l.totalInstallments,
           paidInstallments:  l.paidInstallments,
-          remainingAmount:   Math.max(Number(l.originalAmount) - Number(l.installmentAmount) * l.paidInstallments, 0),
+          // Mismo criterio que useLoanData: preferimos el saldo que mantiene
+          // pay_loan_installment y sólo calculamos linealmente si viene nulo.
+          remainingAmount:   l.currentBalance != null
+            ? Number(l.currentBalance)
+            : Math.max(Number(l.originalAmount) - Number(l.installmentAmount) * l.paidInstallments, 0),
           progress:          l.totalInstallments > 0 ? Math.round((l.paidInstallments / l.totalInstallments) * 100) : 0,
           endDate:           l.endDate ?? null,
           notes:             l.notes   ?? null,
