@@ -83,7 +83,8 @@ export const EditCardModal = ({ card, onClose, onSave }: Props) => {
         accountId: accountId || null,
       });
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('edición de tarjeta falló:', err);
       setError('No se pudo guardar los cambios.');
     } finally {
       setLoading(false);

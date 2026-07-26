@@ -51,7 +51,8 @@ function GoalCard({
       setAdding(false);
       setInputAmount('');
       setAccountId('');
-    } catch {
+    } catch (err) {
+      console.error('aporte a meta de ahorro falló:', err);
       setError('No se pudo registrar el aporte.');
     }
   };

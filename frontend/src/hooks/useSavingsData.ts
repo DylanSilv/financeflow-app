@@ -50,7 +50,8 @@ export function useSavingsData(): UseSavingsData {
         .order('name');
       if (error) throw error;
       setState({ goals: (data ?? []).map(mapGoal), loading: false, error: null });
-    } catch {
+    } catch (err) {
+      console.error('carga de metas de ahorro falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar metas de ahorro.' }));
     }
   }, []);

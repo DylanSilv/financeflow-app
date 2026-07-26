@@ -80,7 +80,8 @@ export function useFixedExpenseData(): UseFixedExpenseData {
       }));
 
       setState({ expenses, loading: false, error: null });
-    } catch {
+    } catch (err) {
+      console.error('carga de gastos fijos falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar gastos fijos.' }));
     }
   }, []);

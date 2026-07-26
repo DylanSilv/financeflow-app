@@ -50,7 +50,8 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
         description:   description.trim() || undefined,
       });
       handleClose();
-    } catch {
+    } catch (err) {
+      console.error('alta de transferencia falló:', err);
       setError('No se pudo registrar la transferencia. Intentá de nuevo.');
     } finally {
       setLoading(false);

@@ -57,7 +57,8 @@ export const AddLoanModal = ({ isOpen, onClose, onSubmit }: Props) => {
         notes:             notes.trim() || undefined,
       });
       handleClose();
-    } catch {
+    } catch (err) {
+      console.error('alta de préstamo falló:', err);
       setError('No se pudo registrar el préstamo. Intentá de nuevo.');
     } finally {
       setLoading(false);

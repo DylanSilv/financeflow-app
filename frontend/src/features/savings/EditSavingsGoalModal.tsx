@@ -52,7 +52,8 @@ export const EditSavingsGoalModal = ({ goal, onClose, onSave }: Props) => {
         color,
       });
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('edición de meta de ahorro falló:', err);
       setError('No se pudo guardar. Intentá de nuevo.');
     } finally {
       setLoading(false);

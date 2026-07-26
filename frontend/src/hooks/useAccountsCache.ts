@@ -33,7 +33,7 @@ export function useAccountsCache() {
         _cache     = (data ?? []) as AccountOption[];
         _lastFetch = Date.now();
         setAccounts(_cache);
-      } catch { /* silencioso */ } finally { setLoading(false); }
+      } catch (err) { console.error('carga del caché de cuentas falló:', err); } finally { setLoading(false); }
     })();
   }, []);
 

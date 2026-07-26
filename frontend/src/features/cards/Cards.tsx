@@ -48,7 +48,7 @@ function CreditCardDetail({ card, index, onEdit, onDelete }: { card: Card; index
           .order('date', { ascending: false })
           .limit(8);
         setTxs((data ?? []).map((t: any) => ({ ...t, amount: Number(t.amount) })));
-      } catch { /* silencioso */ } finally { setLoading(false); }
+      } catch (err) { console.error('carga de movimientos de la tarjeta falló:', err); } finally { setLoading(false); }
     })();
   }, [open, card.id]);
 
@@ -218,7 +218,7 @@ function DebitCardItem({ card, onDelete, onEdit, index }: { card: Card; onDelete
           .order('date', { ascending: false })
           .limit(8);
         setTxs((data ?? []).map((t: any) => ({ ...t, amount: Number(t.amount) })));
-      } catch { /* silencioso */ } finally { setLoading(false); }
+      } catch (err) { console.error('carga de movimientos de la cuenta de la tarjeta falló:', err); } finally { setLoading(false); }
     })();
   }, [open, card.accountId]);
 

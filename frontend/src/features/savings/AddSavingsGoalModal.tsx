@@ -65,7 +65,8 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
       setDeadline(''); setHasTarget(false);
       onClose();
       onSuccess?.();
-    } catch {
+    } catch (err) {
+      console.error('alta de meta de ahorro falló:', err);
       setError('No se pudo crear la meta de ahorro.');
     } finally {
       setLoading(false);

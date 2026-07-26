@@ -32,7 +32,8 @@ async function loadProfile(): Promise<AppUser | null> {
   try {
     const { data } = await supabase.from('User').select('id, name, email').single();
     return data as AppUser | null;
-  } catch {
+  } catch (err) {
+    console.error('lectura del usuario de la app falló:', err);
     return null;
   }
 }
@@ -47,7 +48,8 @@ supabase.auth.onAuthStateChange(async (_event, session) => {
     } else {
       useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
     }
-  } catch {
+  } catch (err) {
+    console.error('inicialización de sesión falló:', err);
     // Si falla cualquier cosa, deslogueamos y mostramos landing
     useAuthStore.setState({ user: null, isAuthenticated: false, isLoading: false });
   }

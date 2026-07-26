@@ -69,7 +69,8 @@ export const EditTransactionModal = ({ transaction, onClose, onSave }: Props) =>
         categoryId:    categoryId || null,
       });
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('edición de movimiento falló:', err);
       setError('No se pudo guardar. Intentá de nuevo.');
     } finally {
       setLoading(false);

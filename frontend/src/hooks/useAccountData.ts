@@ -54,7 +54,8 @@ export function useAccountData(): UseAccountData {
         loading:  false,
         error:    null,
       });
-    } catch {
+    } catch (err) {
+      console.error('carga de cuentas falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar cuentas.' }));
     }
   }, []);

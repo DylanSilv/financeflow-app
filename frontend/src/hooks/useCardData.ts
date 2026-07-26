@@ -53,7 +53,8 @@ export function useCardData(): UseCardData {
       }));
 
       setState({ cards, loading: false, error: null });
-    } catch {
+    } catch (err) {
+      console.error('carga de tarjetas falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar tarjetas.' }));
     }
   }, []);

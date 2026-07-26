@@ -70,7 +70,8 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
       setTotalInstallments(''); setPaidInstallments('0');
       onClose();
       onSuccess?.();
-    } catch {
+    } catch (err) {
+      console.error('alta de gasto fijo falló:', err);
       setError('No se pudo guardar el gasto fijo.');
     } finally {
       setLoading(false);
