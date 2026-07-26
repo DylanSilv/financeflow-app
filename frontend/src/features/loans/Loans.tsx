@@ -38,7 +38,8 @@ function LoanCard({ loan, accounts, onPay, onEdit, onDelete, index }: {
     try {
       await onPay(loan.id, accountId || undefined);
       setPaying(false);
-    } catch {
+    } catch (err) {
+      console.error('pay_loan_installment falló:', err);
       setPayError('No se pudo registrar el pago. Intentá de nuevo.');
     } finally {
       setLoading(false);

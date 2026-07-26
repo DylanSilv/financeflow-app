@@ -50,7 +50,12 @@ function mapLoan(l: any, paidThisMonthIds: Set<string>): Loan {
     installmentAmount: Number(l.installmentAmount),
     totalInstallments: total,
     paidInstallments:  paid,
-    remainingAmount:   Math.max(Number(l.originalAmount) - Number(l.installmentAmount) * paid, 0),
+    // `currentBalance` lo mantiene pay_loan_installment aplicando interestRate.
+    // Quedó nulo en los préstamos previos a esa función, así que ahí caemos al
+    // cálculo lineal, que sólo coincide con el real si el préstamo no tiene interés.
+    remainingAmount:   l.currentBalance != null
+      ? Number(l.currentBalance)
+      : Math.max(Number(l.originalAmount) - Number(l.installmentAmount) * paid, 0),
     progress:          total > 0 ? Math.round((paid / total) * 100) : 0,
     paidThisMonth:     paidThisMonthIds.has(l.id),
     startDate:         l.startDate ?? null,
@@ -91,7 +96,8 @@ export function useLoanData(statusFilter?: 'ACTIVE' | 'PAID'): UseLoanData {
         loading: false,
         error:   null,
       });
-    } catch {
+    } catch (err) {
+      console.error('carga de préstamos falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar préstamos.' }));
     }
   }, [statusFilter]);
@@ -112,7 +118,9 @@ export function useLoanData(statusFilter?: 'ACTIVE' | 'PAID'): UseLoanData {
             ...l,
             paidInstallments: updated.paidInstallments,
             status:           updated.status,
-            remainingAmount:  Number(updated.remainingAmount),
+            remainingAmount:  updated.currentBalance != null
+              ? Number(updated.currentBalance)
+              : Math.max(l.originalAmount - l.installmentAmount * updated.paidInstallments, 0),
             progress:         Number(updated.progress),
           }
         : l,

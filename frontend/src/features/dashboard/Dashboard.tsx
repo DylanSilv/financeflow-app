@@ -303,7 +303,7 @@ export default function Dashboard() {
   const {
     balanceTotal, balanceCuentas,
     evolucion, prestamos, ahorros,
-    loading, error, refetch,
+    loading, refreshing, error, refetch,
   } = useDashboardData();
 
   const autoPayRan = useRef(false);
@@ -441,12 +441,11 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold tracking-tight text-white">{greeting}</h1>
           <p className="text-zinc-500 mt-1 text-sm">Acá está el estado actual de tus finanzas.</p>
         </div>
-        {error && (
-          <button onClick={refetch}
-            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded-lg">
-            <RefreshCw className="w-3.5 h-3.5" /> Reintentar
-          </button>
-        )}
+        <button onClick={refetch} disabled={loading || refreshing}
+          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading || refreshing ? 'animate-spin' : ''}`} />
+          {error ? 'Reintentar' : refreshing ? 'Actualizando…' : 'Actualizar'}
+        </button>
       </header>
 
       {/* ── Metric Cards ── */}
@@ -503,7 +502,7 @@ export default function Dashboard() {
           <div className="h-[280px] flex items-center justify-center text-zinc-600 text-sm">Sin datos de evolución</div>
         ) : (
           <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={280}>
               <ComposedChart key={chartData.length} data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradBalance" x1="0" y1="0" x2="0" y2="1">
@@ -595,7 +594,7 @@ export default function Dashboard() {
           ) : (
             <div className="flex flex-col gap-4">
               <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie data={pieData} dataKey="total" cx="50%" cy="50%"
                       innerRadius={50} outerRadius={78} paddingAngle={3}>

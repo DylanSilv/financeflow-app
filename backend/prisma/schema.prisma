@@ -81,6 +81,11 @@ model Loan {
   totalInstallments Int
   installmentAmount Decimal    @db.Decimal(10, 2)
   paidInstallments  Int        @default(0)
+  // Saldo que mantiene pay_loan_installment aplicando interestRate. Queda nulo
+  // en los préstamos creados antes de esa función.
+  currentBalance    Decimal?   @db.Decimal(14, 2)
+  // Tasa nominal anual. Hoy sólo se puede cargar por fuera de la app.
+  interestRate      Decimal?   @db.Decimal(6, 4)
   startDate         DateTime?
   endDate           DateTime?
   status            LoanStatus @default(ACTIVE)
@@ -152,6 +157,7 @@ model Transaction {
   title         String
   description   String?
   amount        Decimal         @db.Decimal(10, 2)
+  ivaAmount     Decimal?        @db.Decimal(12, 2)
   date          DateTime
   type          TransactionType
   paymentMethod PaymentMethod

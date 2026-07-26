@@ -133,7 +133,8 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
       onClose();
       onSuccess?.();
-    } catch {
+    } catch (err) {
+      console.error('create_transaction falló:', err);
       setError('No se pudo guardar el movimiento. Intenta de nuevo.');
     } finally {
       setLoading(false);
