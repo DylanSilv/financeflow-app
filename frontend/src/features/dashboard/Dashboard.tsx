@@ -435,7 +435,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Header ── */}
-      <header className="flex justify-between items-end">
+      <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <p className="text-sm text-zinc-500 mb-1 capitalize">{currentMonth}</p>
           <h1 className="text-3xl font-bold tracking-tight text-white">{greeting}</h1>
@@ -482,14 +482,14 @@ export default function Dashboard() {
 
       {/* ── Evolution Chart ── */}
       <div className="bg-[#111111] border border-zinc-800/60 p-6 rounded-2xl">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
           <SectionHeader
             title="Evolución Patrimonial"
             subtitle="Ingresos, gastos y balance acumulado por mes"
             accent="#6366f1"
             tooltip="Muestra cómo evolucionaron tus ingresos, gastos y balance mes a mes. Las barras son ingresos y gastos; la línea es tu balance acumulado."
           />
-          <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+          <div className="flex items-center gap-3 text-[11px] text-zinc-500 shrink-0 pl-4 sm:pl-0">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" />Ingresos</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400" />Gastos</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-indigo-500" />Balance</span>
@@ -531,7 +531,7 @@ export default function Dashboard() {
 
         {/* Gastos por Categoría */}
         <div className="bg-[#111111] border border-zinc-800/60 p-6 rounded-2xl">
-          <div className="flex justify-between items-start mb-5">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3 mb-5">
             <div>
               <SectionHeader
                 title="Gastos por Categoría"
@@ -546,7 +546,7 @@ export default function Dashboard() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Navegador de mes */}
               {catMode === 'month' && (
                 <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg px-1 py-1">

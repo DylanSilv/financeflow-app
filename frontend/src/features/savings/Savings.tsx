@@ -261,7 +261,7 @@ export const Savings = () => {
 
   return (
     <div className="flex flex-col gap-8">
-      <motion.header {...fadeUp()} className="flex justify-between items-end">
+      <motion.header {...fadeUp()} className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Mis Ahorros</h1>
           <p className="text-zinc-400 mt-1">Seguí el crecimiento de tus fondos y metas.</p>

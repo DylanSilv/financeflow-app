@@ -111,7 +111,7 @@ export const Accounts = () => {
   return (
     <div className="flex flex-col gap-8">
       {/* Header */}
-      <motion.header {...fadeUp()} className="flex justify-between items-end">
+      <motion.header {...fadeUp()} className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Mis Cuentas</h1>
           <p className="text-zinc-400 mt-1">Gestioná tus cuentas bancarias y de efectivo.</p>
