@@ -112,9 +112,16 @@ function LoanCard({ loan, accounts, onPay, onEdit, onDelete, index }: {
       {/* Detalle */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Restante',       value: `$${loan.remainingAmount.toLocaleString('es-UY', { minimumFractionDigits: 0 })}` },
+          // Con interés mostramos el saldo de capital, que es lo que costaría
+          // cancelar hoy. Sin interés ese concepto no existe y lo único con
+          // sentido es lo que falta desembolsar.
+          loan.principalBalance != null
+            ? { label: 'Saldo de capital', value: `$${loan.principalBalance.toLocaleString('es-UY', { maximumFractionDigits: 0 })}` }
+            : { label: 'Falta pagar',      value: `$${loan.remainingPayments.toLocaleString('es-UY', { maximumFractionDigits: 0 })}` },
           { label: 'Cuotas restantes', value: String(remaining) },
-          { label: 'Total original', value: `$${loan.originalAmount.toLocaleString('es-UY', { minimumFractionDigits: 0 })}` },
+          loan.interestRate != null
+            ? { label: 'Tasa anual', value: `${loan.interestRate.toFixed(2)}%` }
+            : { label: 'Total',      value: `$${loan.originalAmount.toLocaleString('es-UY', { maximumFractionDigits: 0 })}` },
         ].map((item, di) => (
           <motion.div
             key={item.label}
@@ -207,13 +214,15 @@ export const Loans = () => {
   const personal = active.filter(l => l.loanType === 'PERSONAL');
   const purchase = active.filter(l => l.loanType === 'PURCHASE');
 
-  const totalRemaining  = active.reduce((s, l) => s + l.remainingAmount, 0);
+  // Sumamos lo que falta desembolsar, no los saldos de capital: es la única
+  // magnitud comparable entre compras en cuotas y préstamos con interés.
+  const totalRemaining  = active.reduce((s, l) => s + l.remainingPayments, 0);
   const pendingMonthly  = active.filter(l => !l.paidThisMonth);
   const totalMonthly    = pendingMonthly.reduce((s, l) => s + l.installmentAmount, 0);
 
   const summaryCards = [
     { icon: CreditCard,  color: 'indigo',  label: 'Compromisos activos',  value: String(active.length) },
-    { icon: TrendingDown, color: 'red',    label: 'Deuda total restante',  value: `$${totalRemaining.toLocaleString('es-UY', { minimumFractionDigits: 0 })}` },
+    { icon: TrendingDown, color: 'red',    label: 'Falta pagar en total',  value: `$${totalRemaining.toLocaleString('es-UY', { maximumFractionDigits: 0 })}` },
     { icon: Clock,        color: 'yellow', label: 'Cuotas este mes',       value: `$${totalMonthly.toLocaleString('es-UY', { minimumFractionDigits: 0 })}` },
   ];
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { remainingPayments } from '@/lib/loanMath';
 
 export interface BalanceTotal {
   balance:       number;
@@ -46,7 +47,8 @@ export interface ActiveLoan {
   installmentAmount: number;
   totalInstallments: number;
   paidInstallments:  number;
-  remainingAmount:   number;
+  /** Lo que falta desembolsar: cuota × cuotas restantes. Ver lib/loanMath. */
+  remainingPayments: number;
   progress:          number;
   endDate:           string | null;
   notes:             string | null;
@@ -126,11 +128,7 @@ export function useDashboardData(): DashboardData {
           installmentAmount: Number(l.installmentAmount),
           totalInstallments: l.totalInstallments,
           paidInstallments:  l.paidInstallments,
-          // Mismo criterio que useLoanData: preferimos el saldo que mantiene
-          // pay_loan_installment y sólo calculamos linealmente si viene nulo.
-          remainingAmount:   l.currentBalance != null
-            ? Number(l.currentBalance)
-            : Math.max(Number(l.originalAmount) - Number(l.installmentAmount) * l.paidInstallments, 0),
+          remainingPayments: remainingPayments(Number(l.installmentAmount), l.totalInstallments, l.paidInstallments),
           progress:          l.totalInstallments > 0 ? Math.round((l.paidInstallments / l.totalInstallments) * 100) : 0,
           endDate:           l.endDate ?? null,
           notes:             l.notes   ?? null,
