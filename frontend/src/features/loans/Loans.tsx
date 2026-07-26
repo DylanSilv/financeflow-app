@@ -254,7 +254,7 @@ export const Loans = () => {
       </motion.header>
 
       {/* Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {summaryCards.map((card, i) => (
           <motion.div
             key={card.label}
@@ -266,16 +266,18 @@ export const Loans = () => {
             <div className={`w-11 h-11 ${bgColor[card.color]} rounded-xl flex items-center justify-center flex-shrink-0`}>
               <card.icon className={`w-5 h-5 ${iconColor[card.color]}`} />
             </div>
-            <div>
-              <p className="text-xs text-zinc-500 mb-0.5">{card.label}</p>
-              <p className="text-2xl font-bold text-white">{card.value}</p>
+            {/* min-w-0 deja que el bloque se encoja; sin eso el importe se
+                desborda de la tarjeta en columnas angostas. */}
+            <div className="min-w-0">
+              <p className="text-xs text-zinc-500 mb-0.5 truncate">{card.label}</p>
+              <p className="text-xl lg:text-2xl font-bold text-white truncate">{card.value}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="bg-[#111111] border border-zinc-800 rounded-2xl p-5 flex flex-col gap-4">
               <Skeleton className="h-5 w-40" />
@@ -295,7 +297,7 @@ export const Loans = () => {
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
                 Préstamos personales
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {personal.map((l, i) => (
                   <LoanCard key={l.id} loan={l} accounts={accounts} onPay={payInstallment} index={i}
                     onEdit={setEditTarget}
@@ -311,7 +313,7 @@ export const Loans = () => {
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
                 Compras en cuotas
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {purchase.map((l, i) => (
                   <LoanCard key={l.id} loan={l} accounts={accounts} onPay={payInstallment} index={i}
                     onEdit={setEditTarget}
@@ -327,7 +329,7 @@ export const Loans = () => {
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
                 Finalizados
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
                 {paid.map((l, i) => (
                   <LoanCard key={l.id} loan={l} accounts={accounts} onPay={payInstallment} index={i}
                     onEdit={setEditTarget}
