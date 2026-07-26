@@ -7,6 +7,21 @@ interface Account     { id: string; name: string; type: string; }
 interface ApiCategory { id: string; name: string; color: string | null; }
 interface CardOption  { id: string; name: string; type: string; dueDay: number | null; limit: number | null; balanceUsed: number; }
 
+/** Fila cruda de `Card`: Postgres devuelve los numeric como string. */
+interface RawCard {
+  id: string; name?: string; type?: string; dueDay?: number | null;
+  limit?: string | number | null; balanceUsed?: string | number | null;
+}
+
+const toCardOption = (c: RawCard): CardOption => ({
+  id:          c.id,
+  name:        c.name ?? '',
+  type:        c.type ?? '',
+  dueDay:      c.dueDay ?? null,
+  limit:       c.limit != null ? Number(c.limit) : null,
+  balanceUsed: Number(c.balanceUsed ?? 0),
+});
+
 interface Props {
   isOpen:    boolean;
   onClose:   () => void;
@@ -65,9 +80,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       .then(({ data }) => { setCategories(data ?? []); if (data?.length) setCategoryId(data[0].id); }, () => {});
     supabase.from('Card').select('id, name, type, dueDay, limit, balanceUsed').order('name')
       .then(({ data }) => {
-        const credit = (data ?? [])
-          .filter((c: any) => c.type === 'CREDIT')
-          .map((c: any) => ({ ...c, limit: c.limit != null ? Number(c.limit) : null, balanceUsed: Number(c.balanceUsed ?? 0) }));
+        const credit = ((data ?? []) as RawCard[])
+          .filter(c => c.type === 'CREDIT')
+          .map(toCardOption);
         setCreditCards(credit);
         if (credit.length) setCardId(credit[0].id);
       }, () => {});
@@ -82,7 +97,7 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       setBalances(Object.fromEntries(rows.map(r => [r.id, Number(r.balance)])));
     }, () => {});
     supabase.from('Card').select('id, limit, balanceUsed').then(({ data }) => {
-      const byId = new Map((data ?? []).map((c: any) => [c.id, c]));
+      const byId = new Map(((data ?? []) as RawCard[]).map(c => [c.id, c]));
       setCreditCards(prev => prev.map(c => {
         const fresh = byId.get(c.id);
         return fresh
