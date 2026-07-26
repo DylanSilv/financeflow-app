@@ -114,6 +114,9 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
         p_category_id:    categoryId || null,
         p_card_id:        paymentMethod === 'CREDIT_CARD' ? (cardId || null) : null,
         p_account_id:     paymentMethod !== 'CREDIT_CARD' ? (accountId || null) : null,
+        // Existen dos overloads de create_transaction en la base; mandar este
+        // parámetro desambigua hacia el que incluye ivaAmount (el vigente).
+        p_iva_amount:     null,
       });
       if (txErr) throw txErr;
 
@@ -133,7 +136,8 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
       onClose();
       onSuccess?.();
-    } catch {
+    } catch (err) {
+      console.error('create_transaction falló:', err);
       setError('No se pudo guardar el movimiento. Intenta de nuevo.');
     } finally {
       setLoading(false);

@@ -87,7 +87,9 @@ export function useDashboardData(): DashboardData {
   });
 
   const fetchAll = useCallback(async () => {
-    setData(prev => ({ ...prev, loading: true, error: null }));
+    // Sólo mostramos el esqueleto en la carga inicial. En un refetch mantenemos
+    // los datos previos en pantalla para evitar el parpadeo del dashboard.
+    setData(prev => ({ ...prev, loading: prev.balanceTotal === null, error: null }));
 
     const results = await Promise.allSettled([
       supabase.rpc('get_balance_total'),
