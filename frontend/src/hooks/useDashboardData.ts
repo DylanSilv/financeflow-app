@@ -69,7 +69,10 @@ export interface DashboardData {
   evolucion:          MonthlyEvolution[]     | null;
   prestamos:          ActiveLoan[]           | null;
   ahorros:            SavingsGoal[]          | null;
+  /** Carga inicial: la UI muestra esqueletos. */
   loading:            boolean;
+  /** Recarga en segundo plano con datos ya en pantalla. */
+  refreshing:         boolean;
   error:              string | null;
   refetch:            () => void;
 }
@@ -83,13 +86,20 @@ export function useDashboardData(): DashboardData {
     prestamos:        null,
     ahorros:          null,
     loading:          true,
+    refreshing:       false,
     error:            null,
   });
 
   const fetchAll = useCallback(async () => {
     // Sólo mostramos el esqueleto en la carga inicial. En un refetch mantenemos
-    // los datos previos en pantalla para evitar el parpadeo del dashboard.
-    setData(prev => ({ ...prev, loading: prev.balanceTotal === null, error: null }));
+    // los datos previos en pantalla para evitar el parpadeo del dashboard, y
+    // señalamos la recarga con `refreshing`.
+    setData(prev => ({
+      ...prev,
+      loading:    prev.balanceTotal === null,
+      refreshing: prev.balanceTotal !== null,
+      error:      null,
+    }));
 
     const results = await Promise.allSettled([
       supabase.rpc('get_balance_total'),
@@ -146,6 +156,7 @@ export function useDashboardData(): DashboardData {
       prestamos,
       ahorros,
       loading:          false,
+      refreshing:       false,
       error:            anyFailed ? 'Algunos datos no pudieron cargarse.' : null,
     });
   }, []);

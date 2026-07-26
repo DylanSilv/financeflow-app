@@ -303,7 +303,7 @@ export default function Dashboard() {
   const {
     balanceTotal, balanceCuentas,
     evolucion, prestamos, ahorros,
-    loading, error, refetch,
+    loading, refreshing, error, refetch,
   } = useDashboardData();
 
   const autoPayRan = useRef(false);
@@ -441,12 +441,11 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold tracking-tight text-white">{greeting}</h1>
           <p className="text-zinc-500 mt-1 text-sm">Acá está el estado actual de tus finanzas.</p>
         </div>
-        {error && (
-          <button onClick={refetch}
-            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded-lg">
-            <RefreshCw className="w-3.5 h-3.5" /> Reintentar
-          </button>
-        )}
+        <button onClick={refetch} disabled={loading || refreshing}
+          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading || refreshing ? 'animate-spin' : ''}`} />
+          {error ? 'Reintentar' : refreshing ? 'Actualizando…' : 'Actualizar'}
+        </button>
       </header>
 
       {/* ── Metric Cards ── */}
