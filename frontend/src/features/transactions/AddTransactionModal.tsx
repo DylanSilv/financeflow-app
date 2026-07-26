@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 interface Account     { id: string; name: string; type: string; }
 interface ApiCategory { id: string; name: string; color: string | null; }
-interface CardOption  { id: string; name: string; type: string; dueDay: number | null; }
+interface CardOption  { id: string; name: string; type: string; dueDay: number | null; limit: number | null; balanceUsed: number; }
 
 interface Props {
   isOpen:    boolean;
@@ -45,6 +45,7 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [accounts,      setAccounts]      = useState<Account[]>([]);
   const [creditCards,   setCreditCards]   = useState<CardOption[]>([]);
   const [categories,    setCategories]    = useState<ApiCategory[]>([]);
+  const [balances,      setBalances]      = useState<Record<string, number>>({});
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
 
@@ -62,13 +63,58 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       .then(({ data }) => { setAccounts(data ?? []); if (data?.length) setAccountId(data[0].id); }, () => {});
     supabase.from('Category').select('id, name, color').order('name')
       .then(({ data }) => { setCategories(data ?? []); if (data?.length) setCategoryId(data[0].id); }, () => {});
-    supabase.from('Card').select('id, name, type, dueDay').order('name')
+    supabase.from('Card').select('id, name, type, dueDay, limit, balanceUsed').order('name')
       .then(({ data }) => {
-        const credit = (data ?? []).filter((c: any) => c.type === 'CREDIT');
+        const credit = (data ?? [])
+          .filter((c: any) => c.type === 'CREDIT')
+          .map((c: any) => ({ ...c, limit: c.limit != null ? Number(c.limit) : null, balanceUsed: Number(c.balanceUsed ?? 0) }));
         setCreditCards(credit);
         if (credit.length) setCardId(credit[0].id);
       }, () => {});
   }, []);
+
+  // Los saldos se releen cada vez que se abre el modal: si acabás de guardar un
+  // gasto, el disponible que teníamos en memoria ya quedó viejo.
+  useEffect(() => {
+    if (!isOpen) return;
+    supabase.rpc('get_balance_por_cuenta').then(({ data }) => {
+      const rows = (data ?? []) as { id: string; balance: number }[];
+      setBalances(Object.fromEntries(rows.map(r => [r.id, Number(r.balance)])));
+    }, () => {});
+    supabase.from('Card').select('id, limit, balanceUsed').then(({ data }) => {
+      const byId = new Map((data ?? []).map((c: any) => [c.id, c]));
+      setCreditCards(prev => prev.map(c => {
+        const fresh = byId.get(c.id);
+        return fresh
+          ? { ...c, limit: fresh.limit != null ? Number(fresh.limit) : null, balanceUsed: Number(fresh.balanceUsed ?? 0) }
+          : c;
+      }));
+    }, () => {});
+  }, [isOpen]);
+
+  // Disponible del medio de pago elegido. Null significa "sin tope que validar":
+  // un ingreso, o una tarjeta sin límite cargado. Replica lo que hace
+  // available_funds() en la base, que es quien realmente bloquea.
+  const availableFunds: number | null = (() => {
+    if (type !== 'EXPENSE') return null;
+    if (paymentMethod === 'CREDIT_CARD') {
+      const card = creditCards.find(c => c.id === cardId);
+      if (!card || card.limit == null || card.limit <= 0) return null;
+      return card.limit - card.balanceUsed;
+    }
+    if (accountId && balances[accountId] != null) return balances[accountId];
+    return null;
+  })();
+
+  const parsedAmountPreview = parseFloat(amount) || 0;
+  const insufficientFunds = availableFunds != null && parsedAmountPreview > availableFunds;
+  // Aviso temprano: el gasto no supera el disponible pero se come más del 80 %.
+  const nearlyOutOfFunds =
+    !insufficientFunds && availableFunds != null && availableFunds > 0 &&
+    parsedAmountPreview > 0 && parsedAmountPreview > availableFunds * 0.8;
+
+  const fmtMoney = (n: number) =>
+    `$${n.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +149,11 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       }
     }
 
+    if (type === 'EXPENSE' && availableFunds != null && parsedAmount > availableFunds) {
+      setError(`Saldo insuficiente. Disponible: ${fmtMoney(availableFunds)}.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const { error: txErr } = await supabase.rpc('create_transaction', {
@@ -135,7 +186,14 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       onSuccess?.();
     } catch (err) {
       console.error('create_transaction falló:', err);
-      setError('No se pudo guardar el movimiento. Intenta de nuevo.');
+      // La base valida de nuevo: entre que leímos el disponible y guardamos, el
+      // saldo pudo cambiar (otra pestaña, otro dispositivo).
+      const msg = (err as { message?: string })?.message ?? '';
+      if (msg.includes('SALDO_INSUFICIENTE')) {
+        setError('Saldo insuficiente. El saldo cambió mientras cargabas el movimiento.');
+      } else {
+        setError('No se pudo guardar el movimiento. Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
@@ -339,14 +397,43 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                   )
                 )}
 
+                {/* Disponible del medio de pago elegido */}
+                {availableFunds != null && (
+                  <div
+                    className={`flex items-center justify-between text-xs rounded-lg px-3 py-2.5 border ${
+                      insufficientFunds
+                        ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                        : nearlyOutOfFunds
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-500'
+                    }`}
+                  >
+                    <span>
+                      {insufficientFunds
+                        ? 'Saldo insuficiente'
+                        : nearlyOutOfFunds
+                          ? 'Te quedás casi sin saldo'
+                          : 'Disponible'}
+                    </span>
+                    <span className="font-semibold tabular-nums">
+                      {fmtMoney(availableFunds)}
+                      {parsedAmountPreview > 0 && !insufficientFunds && (
+                        <span className="font-normal opacity-70">
+                          {' → '}{fmtMoney(availableFunds - parsedAmountPreview)}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
                 {error && <p className="text-red-400 text-xs">{error}</p>}
 
                 <div className="pt-4 mt-2 border-t border-zinc-800/50">
                   <button
-                    type="submit" disabled={loading}
-                    className="w-full bg-white text-black font-semibold rounded-lg px-4 py-3 text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50"
+                    type="submit" disabled={loading || insufficientFunds}
+                    className="w-full bg-white text-black font-semibold rounded-lg px-4 py-3 text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Guardando...' : 'Guardar Movimiento'}
+                    {loading ? 'Guardando...' : insufficientFunds ? 'Saldo insuficiente' : 'Guardar Movimiento'}
                   </button>
                 </div>
               </form>
