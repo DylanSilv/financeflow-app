@@ -376,7 +376,7 @@ export const FixedExpenses = () => {
     <div className="flex flex-col gap-6">
 
       {/* Header */}
-      <motion.header {...fadeUp()} className="flex justify-between items-end">
+      <motion.header {...fadeUp()} className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Cuentas Fijas</h1>
           <p className="text-zinc-400 mt-1">Seguimiento de tus pagos recurrentes del mes.</p>

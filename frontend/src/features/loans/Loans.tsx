@@ -70,7 +70,7 @@ function LoanCard({ loan, accounts, onPay, onEdit, onDelete, index }: {
             {loan.loanType === 'PERSONAL' ? 'Préstamo personal' : 'Compra en cuotas'}
           </span>
         </div>
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-1.5 sm:gap-3 shrink-0 pl-2">
           <div className="text-right">
             <p className="text-xs text-zinc-500 mb-0.5">Cuota</p>
             <p className="text-lg font-bold text-white">
@@ -239,7 +239,7 @@ export const Loans = () => {
 
   return (
     <div className="flex flex-col gap-8">
-      <motion.header {...fadeUp()} className="flex justify-between items-end">
+      <motion.header {...fadeUp()} className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Préstamos y Cuotas</h1>
           <p className="text-zinc-400 mt-1">Seguí el progreso de tus compromisos financieros.</p>

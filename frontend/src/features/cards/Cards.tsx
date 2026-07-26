@@ -342,7 +342,7 @@ export const Cards = () => {
     <div className="flex flex-col gap-8">
       <motion.header
         {...fadeUp()}
-        className="flex justify-between items-end"
+        className="flex flex-col md:flex-row md:justify-between md:items-end gap-4"
       >
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Mis Tarjetas</h1>
