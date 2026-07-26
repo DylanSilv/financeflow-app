@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { insufficientFundsMessage } from '@/lib/fundsError';
 
 interface Account     { id: string; name: string; type: string; }
 interface ApiCategory { id: string; name: string; color: string | null; }
@@ -203,12 +204,7 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       console.error('create_transaction falló:', err);
       // La base valida de nuevo: entre que leímos el disponible y guardamos, el
       // saldo pudo cambiar (otra pestaña, otro dispositivo).
-      const msg = (err as { message?: string })?.message ?? '';
-      if (msg.includes('SALDO_INSUFICIENTE')) {
-        setError('Saldo insuficiente. El saldo cambió mientras cargabas el movimiento.');
-      } else {
-        setError('No se pudo guardar el movimiento. Intenta de nuevo.');
-      }
+      setError(insufficientFundsMessage(err, 'No se pudo guardar el movimiento. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }
