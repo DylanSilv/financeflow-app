@@ -214,7 +214,7 @@ function LoanCard({ loan }: { loan: ActiveLoan }) {
           style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? '#10b981' : '#6366f1' }} />
       </div>
       <div className="flex justify-between text-[11px] text-zinc-500">
-        <span>Resta <span className="text-zinc-300 font-medium">${fmt(loan.remainingAmount)}</span></span>
+        <span>Falta pagar <span className="text-zinc-300 font-medium">${fmt(loan.remainingPayments)}</span></span>
         <span>{remaining > 0 ? `${remaining} × $${fmt(loan.installmentAmount)}` : 'Última cuota'}</span>
       </div>
     </div>

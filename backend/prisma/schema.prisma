@@ -90,8 +90,10 @@ model Loan {
   // Saldo que mantiene pay_loan_installment aplicando interestRate. Queda nulo
   // en los préstamos creados antes de esa función.
   currentBalance    Decimal?   @db.Decimal(14, 2)
-  // Tasa nominal anual. Hoy sólo se puede cargar por fuera de la app.
-  interestRate      Decimal?   @db.Decimal(6, 4)
+  // Tasa nominal anual en %. La calcula el frontend a partir de capital, cuota
+  // y plazo (ver frontend/src/lib/loanMath.ts). Null = compra en cuotas sin
+  // interés, y en ese caso originalAmount es el total a pagar, no el capital.
+  interestRate      Decimal?   @db.Decimal(9, 4)
   startDate         DateTime?
   endDate           DateTime?
   status            LoanStatus @default(ACTIVE)

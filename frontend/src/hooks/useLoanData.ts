@@ -1,16 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { outstandingPrincipal, remainingPayments } from '@/lib/loanMath';
 
 export interface Loan {
   id:                string;
   name:              string;
   loanType:          'PERSONAL' | 'PURCHASE';
   status:            'ACTIVE' | 'PAID' | 'CANCELLED';
+  /** Con tasa: capital prestado. Sin tasa: total a pagar. Ver lib/loanMath. */
   originalAmount:    number;
   installmentAmount: number;
   totalInstallments: number;
   paidInstallments:  number;
-  remainingAmount:   number;
+  /** Nominal anual en %. Null si es una compra en cuotas sin interés. */
+  interestRate:      number | null;
+  /** Lo que falta desembolsar: cuota × cuotas restantes. Siempre aplica. */
+  remainingPayments: number;
+  /** Lo que costaría cancelar hoy. Null si el préstamo no tiene interés. */
+  principalBalance:  number | null;
   progress:          number;
   paidThisMonth:     boolean;
   startDate:         string | null;
@@ -30,32 +37,38 @@ interface UseLoanData extends State {
 
 export interface CreateLoanInput {
   name:              string;
+  /** Con tasa: capital prestado. Sin tasa: total a pagar. */
   originalAmount:    number;
   installmentAmount: number;
   totalInstallments: number;
   paidInstallments:  number;
+  /** Nominal anual en %, o null si es una compra en cuotas sin interés. */
+  interestRate?:     number | null;
   startDate?:        string;
   notes?:            string;
 }
 
 function mapLoan(l: any, paidThisMonthIds: Set<string>): Loan {
-  const paid = l.paidInstallments;
-  const total = l.totalInstallments;
+  const paid    = l.paidInstallments;
+  const total   = l.totalInstallments;
+  const capital = Number(l.originalAmount);
+  const cuota   = Number(l.installmentAmount);
+  const tasa    = l.interestRate != null ? Number(l.interestRate) : null;
+
   return {
     id:                l.id,
     name:              l.name,
     loanType:          l.loanType,
     status:            l.status,
-    originalAmount:    Number(l.originalAmount),
-    installmentAmount: Number(l.installmentAmount),
+    originalAmount:    capital,
+    installmentAmount: cuota,
     totalInstallments: total,
     paidInstallments:  paid,
-    // `currentBalance` lo mantiene pay_loan_installment aplicando interestRate.
-    // Quedó nulo en los préstamos previos a esa función, así que ahí caemos al
-    // cálculo lineal, que sólo coincide con el real si el préstamo no tiene interés.
-    remainingAmount:   l.currentBalance != null
-      ? Number(l.currentBalance)
-      : Math.max(Number(l.originalAmount) - Number(l.installmentAmount) * paid, 0),
+    interestRate:      tasa,
+    // Los dos saldos se derivan siempre del cronograma, así que no dependen de
+    // que `currentBalance` esté actualizado ni de que se haya pagado por la app.
+    remainingPayments: remainingPayments(cuota, total, paid),
+    principalBalance:  outstandingPrincipal(capital, cuota, paid, tasa),
     progress:          total > 0 ? Math.round((paid / total) * 100) : 0,
     paidThisMonth:     paidThisMonthIds.has(l.id),
     startDate:         l.startDate ?? null,
@@ -116,12 +129,13 @@ export function useLoanData(statusFilter?: 'ACTIVE' | 'PAID'): UseLoanData {
       loans: prev.loans.map(l => l.id === id
         ? {
             ...l,
-            paidInstallments: updated.paidInstallments,
-            status:           updated.status,
-            remainingAmount:  updated.currentBalance != null
-              ? Number(updated.currentBalance)
-              : Math.max(l.originalAmount - l.installmentAmount * updated.paidInstallments, 0),
-            progress:         Number(updated.progress),
+            paidInstallments:  updated.paidInstallments,
+            status:            updated.status,
+            // Recalculamos con la misma función que en la carga, en vez de leer
+            // lo que devuelve el RPC, para que ambos caminos den siempre igual.
+            remainingPayments: remainingPayments(l.installmentAmount, l.totalInstallments, updated.paidInstallments),
+            principalBalance:  outstandingPrincipal(l.originalAmount, l.installmentAmount, updated.paidInstallments, l.interestRate),
+            progress:          Number(updated.progress),
           }
         : l,
       ),
@@ -151,6 +165,7 @@ export function useLoanData(statusFilter?: 'ACTIVE' | 'PAID'): UseLoanData {
       installmentAmount: data.installmentAmount,
       totalInstallments: total,
       paidInstallments:  paid,
+      interestRate:      data.interestRate ?? null,
       startDate:         data.startDate ?? null,
       notes:             data.notes?.trim() || null,
       userId:            (user as any)?.id,
