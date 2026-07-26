@@ -350,7 +350,7 @@ export default function Dashboard() {
       try {
         const { data } = await supabase.rpc('get_gastos_por_categoria', params);
         setGastosCategorias(data as any);
-      } catch { /* silencioso */ } finally { setCatLoading(false); }
+      } catch (err) { console.error('get_gastos_por_categoria falló:', err); } finally { setCatLoading(false); }
     })();
   }, [catMode, catYear, catMonth]);
 

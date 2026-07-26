@@ -78,7 +78,8 @@ function ExpenseRow({
     try {
       await onPay(expense.id, selectedCard?.accountId ?? undefined);
       setShowPay(false);
-    } catch {
+    } catch (err) {
+      console.error('pago de gasto fijo falló:', err);
       setPayError('No se pudo registrar el pago. Intentá de nuevo.');
     } finally {
       setPaying(false);
@@ -344,7 +345,8 @@ export const FixedExpenses = () => {
         setAutoPayResult(result);
         if (result.count > 0) refetch();
       }
-    } catch {
+    } catch (err) {
+      console.error('run_autopay falló:', err);
       if (manual) setAutoPayResult({ count: 0, paid: [] });
     } finally {
       setAutoPayLoading(false);

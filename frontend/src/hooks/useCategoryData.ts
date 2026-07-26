@@ -36,7 +36,8 @@ export function useCategoryData() {
       }));
 
       setState({ categories, loading: false, error: null });
-    } catch {
+    } catch (err) {
+      console.error('carga de categorías falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar categorías.' }));
     }
   }, []);

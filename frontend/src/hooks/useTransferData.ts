@@ -51,7 +51,7 @@ export function useTransferData(): UseTransferData {
           toName:        t.toAccount?.name   ?? '',
         })),
       );
-    } catch { /* silencioso */ }
+    } catch (err) { console.error('carga de transferencias falló:', err); }
     finally { setLoading(false); }
   }, []);
 

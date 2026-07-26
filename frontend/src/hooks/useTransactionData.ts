@@ -73,7 +73,8 @@ export function useTransactionData(
 
       setTransactions(prev => replace ? rows : [...prev, ...rows]);
       setHasMore(rows.length === TAKE);
-    } catch {
+    } catch (err) {
+      console.error('carga de movimientos falló:', err);
       setError('Error al cargar movimientos.');
     } finally {
       setLoading(false);

@@ -61,7 +61,8 @@ export const EditFixedExpenseModal = ({ expense, onClose, onSave }: Props) => {
         accountId: autoPay ? (accountId || null) : null,
       });
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('edición de gasto fijo falló:', err);
       setError('No se pudo guardar. Intentá de nuevo.');
     } finally {
       setLoading(false);

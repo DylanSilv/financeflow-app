@@ -84,7 +84,8 @@ export const AddCardModal = ({ isOpen, onClose, onSuccess }: Props) => {
       setStatementDay(''); setDueDay('');
       onClose();
       onSuccess?.();
-    } catch {
+    } catch (err) {
+      console.error('alta de tarjeta falló:', err);
       setError('No se pudo registrar la tarjeta.');
     } finally {
       setLoading(false);

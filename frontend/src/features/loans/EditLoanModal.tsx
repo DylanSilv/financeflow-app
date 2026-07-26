@@ -31,7 +31,8 @@ export const EditLoanModal = ({ loan, onClose, onSave }: Props) => {
     try {
       await onSave(loan!.id, { name: name.trim(), notes: notes.trim() || undefined });
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('edición de préstamo falló:', err);
       setError('No se pudo guardar. Intentá de nuevo.');
     } finally {
       setLoading(false);
