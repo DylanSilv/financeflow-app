@@ -91,7 +91,8 @@ export function useLoanData(statusFilter?: 'ACTIVE' | 'PAID'): UseLoanData {
         loading: false,
         error:   null,
       });
-    } catch {
+    } catch (err) {
+      console.error('carga de préstamos falló:', err);
       setState(prev => ({ ...prev, loading: false, error: 'Error al cargar préstamos.' }));
     }
   }, [statusFilter]);
