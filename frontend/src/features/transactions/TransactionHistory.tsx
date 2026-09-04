@@ -4,7 +4,7 @@ import { useTransactionData } from '@/hooks/useTransactionData';
 import { AddTransactionModal } from './AddTransactionModal';
 import { EditTransactionModal } from './EditTransactionModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Search, ArrowDownRight, ArrowUpRight, Trash2, Plus, Filter, Pencil, ChevronLeft, ChevronRight, ArrowRight, Landmark, CreditCard } from 'lucide-react';
 import { AddTransferModal } from './AddTransferModal';
 import { useTransferData } from '@/hooks/useTransferData';
@@ -189,7 +189,7 @@ export const TransactionHistory = () => {
             <div className="divide-y divide-zinc-800/50">
               {[1,2,3,4,5,6,7,8].map(i => (
                 <div key={i} className="p-4 flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
                   <div className="flex-1 flex flex-col gap-2">
                     <Skeleton className="h-4 w-48" />
                     <Skeleton className="h-3 w-24" />

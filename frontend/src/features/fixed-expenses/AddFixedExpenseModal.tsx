@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CalendarDays, Hash, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { Toggle } from '@/components/ui/Toggle';
+import { SwitchField } from '@/components/ui/switch-field';
 
 interface Account { id: string; name: string; type: string; }
 
@@ -152,7 +152,7 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </div>
 
                 {/* Toggle cuotas */}
-                <Toggle
+                <SwitchField
                   checked={hasInstallments}
                   onChange={setHasInstallments}
                   label="Pago en cuotas"
@@ -210,7 +210,7 @@ export const AddFixedExpenseModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </AnimatePresence>
 
                 {/* Auto-pago */}
-                <Toggle
+                <SwitchField
                   checked={autoPay}
                   onChange={setAutoPay}
                   label="Pago Automático"

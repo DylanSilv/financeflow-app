@@ -45,7 +45,7 @@ function HelpTooltip({ text }: { text: string }) {
   const hide = useCallback(() => setPos(null), []);
 
   return (
-    <div ref={ref} className="inline-flex flex-shrink-0" onMouseEnter={show} onMouseLeave={hide}>
+    <div ref={ref} className="inline-flex shrink-0" onMouseEnter={show} onMouseLeave={hide}>
       <div className="w-4 h-4 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center cursor-help transition-colors">
         <span className="text-[9px] font-bold text-zinc-400 leading-none">?</span>
       </div>
@@ -68,7 +68,7 @@ function HelpTooltip({ text }: { text: string }) {
 function SectionHeader({ title, subtitle, accent = '#6366f1', tooltip }: { title: string; subtitle?: string; accent?: string; tooltip?: string }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: accent }} />
+      <div className="w-1 h-5 rounded-full shrink-0" style={{ backgroundColor: accent }} />
       <div>
         <div className="flex items-center gap-1.5">
           <h3 className="text-base font-semibold text-white">{title}</h3>
@@ -154,7 +154,7 @@ function AccountCard({ acc }: { acc: AccountBalance }) {
 
   return (
     <div className="bg-[#111111] border border-zinc-800/60 rounded-xl p-4 flex items-center gap-3 hover:border-zinc-700 transition-colors group">
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
         style={{ backgroundColor: color + '20' }}>
         <Building2 className="w-4 h-4" style={{ color }} />
       </div>
@@ -205,7 +205,7 @@ function LoanCard({ loan }: { loan: ActiveLoan }) {
             {typeLabel}
           </span>
         </div>
-        <span className="text-xs font-semibold text-indigo-400 flex-shrink-0">
+        <span className="text-xs font-semibold text-indigo-400 shrink-0">
           {loan.paidInstallments}/{loan.totalInstallments}
         </span>
       </div>
@@ -395,14 +395,14 @@ export default function Dashboard() {
               transition={{ delay: step * 0.1, duration: 0.3 }}
               className="flex items-center gap-4 p-4 bg-[#111111] border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all group"
             >
-              <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-400 flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-400 shrink-0">
                 {step}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white">{label}</p>
                 <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-300 transition-colors flex-shrink-0" />
+              <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-300 transition-colors shrink-0" />
             </motion.a>
           ))}
         </div>
@@ -420,7 +420,7 @@ export default function Dashboard() {
           className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl px-5 py-4 flex items-start justify-between gap-4"
         >
           <div className="flex items-center gap-3">
-            <Zap className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <Zap className="w-4 h-4 text-indigo-400 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-indigo-300">
                 AutoPay procesó {autoPayResult.length} gasto{autoPayResult.length !== 1 ? 's' : ''} automáticamente
@@ -430,7 +430,7 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
-          <button onClick={() => setAutoPayResult(null)} className="text-indigo-600 hover:text-indigo-400 transition-colors flex-shrink-0 text-xl leading-none">×</button>
+          <button onClick={() => setAutoPayResult(null)} className="text-indigo-600 hover:text-indigo-400 transition-colors shrink-0 text-xl leading-none">×</button>
         </motion.div>
       )}
 
@@ -551,14 +551,14 @@ export default function Dashboard() {
               {catMode === 'month' && (
                 <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg px-1 py-1">
                   <button onClick={prevMonth}
-                    className="p-1 text-zinc-500 hover:text-white transition-colors rounded">
+                    className="p-1 text-zinc-500 hover:text-white transition-colors rounded-sm">
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   <span className="text-xs text-zinc-300 font-medium px-1 min-w-[72px] text-center capitalize">
                     {new Date(catYear, catMonth - 1, 1).toLocaleDateString('es-UY', { month: 'short', year: '2-digit' })}
                   </span>
                   <button onClick={nextMonth} disabled={isCurrentMonth}
-                    className="p-1 text-zinc-500 hover:text-white transition-colors rounded disabled:opacity-30 disabled:cursor-not-allowed">
+                    className="p-1 text-zinc-500 hover:text-white transition-colors rounded-sm disabled:opacity-30 disabled:cursor-not-allowed">
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -596,7 +596,7 @@ export default function Dashboard() {
               <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
-                    <Pie data={pieData} dataKey="total" cx="50%" cy="50%"
+                    <Pie data={pieData as unknown as Record<string, unknown>[]} dataKey="total" cx="50%" cy="50%"
                       innerRadius={50} outerRadius={78} paddingAngle={3}>
                       {pieData.map((entry, i) => (
                         <Cell key={entry.name}
@@ -612,7 +612,7 @@ export default function Dashboard() {
               <div className="space-y-2">
                 {cats.slice(0, 6).map((cat, i) => (
                   <div key={cat.name} className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: cat.color !== '#71717a' ? cat.color : PIE_COLORS[i % PIE_COLORS.length] }} />
                     <span className="text-xs text-zinc-400 flex-1 truncate">{cat.name}</span>
                     <span className="text-xs text-zinc-500 font-medium">{cat.percentage}%</span>

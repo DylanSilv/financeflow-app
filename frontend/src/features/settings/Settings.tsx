@@ -38,14 +38,14 @@ function SettingRow({
       disabled={!onClick}
       className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-zinc-800/40 transition-colors rounded-xl group disabled:cursor-default"
     >
-      <div className="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center flex-shrink-0">
+      <div className="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4 text-zinc-400" />
       </div>
       <div className="flex-1 text-left min-w-0">
         <p className="text-sm font-medium text-zinc-100">{label}</p>
         {value && <p className="text-xs text-zinc-500 truncate mt-0.5">{value}</p>}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {badge && (
           <span className="text-[10px] font-semibold bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full">
             {badge}
@@ -169,7 +169,7 @@ export default function Settings() {
 
           {/* Avatar + nombre */}
           <div className="flex items-center gap-4 px-4 py-5 border-b border-zinc-800/60">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white flex-shrink-0 shadow-lg shadow-indigo-500/20">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-lg shadow-indigo-500/20">
               {user?.name?.[0]?.toUpperCase() ?? 'U'}
             </div>
             <div className="min-w-0">
@@ -187,7 +187,7 @@ export default function Settings() {
               onClick={handleTogglePw}
               className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-zinc-800/40 transition-colors group"
             >
-              <div className="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center shrink-0">
                 <Shield className="w-4 h-4 text-zinc-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
@@ -286,7 +286,7 @@ export default function Settings() {
             disabled={loggingOut}
             className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-red-500/5 transition-colors rounded-xl group"
           >
-            <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
               <LogOut className="w-4 h-4 text-red-400" />
             </div>
             <span className="text-sm font-medium text-red-400">

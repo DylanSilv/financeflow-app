@@ -100,7 +100,7 @@ export const AddTransferModal = ({ isOpen, onClose, onSubmit }: Props) => {
                       {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </div>
-                  <div className="mt-5 flex-shrink-0">
+                  <div className="mt-5 shrink-0">
                     <ArrowRight className="w-4 h-4 text-zinc-600" />
                   </div>
                   <div className="flex-1 space-y-1.5">

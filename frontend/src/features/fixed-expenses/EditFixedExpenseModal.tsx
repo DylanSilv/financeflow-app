@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Pencil, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { FixedExpense } from '@/hooks/useFixedExpenseData';
-import { Toggle } from '@/components/ui/Toggle';
+import { SwitchField } from '@/components/ui/switch-field';
 
 interface Account { id: string; name: string; type: string; }
 
@@ -114,7 +114,7 @@ export const EditFixedExpenseModal = ({ expense, onClose, onSave }: Props) => {
                 </div>
 
                 {/* AutoPay toggle */}
-                <Toggle
+                <SwitchField
                   checked={autoPay}
                   onChange={setAutoPay}
                   label="Pago Automático"

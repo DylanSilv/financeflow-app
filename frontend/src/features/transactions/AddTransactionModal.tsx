@@ -359,7 +359,7 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
                               type="checkbox"
                               checked={withCuotas}
                               onChange={e => { setWithCuotas(e.target.checked); setNumCuotas(''); }}
-                              className="w-4 h-4 accent-indigo-500 rounded"
+                              className="w-4 h-4 accent-indigo-500 rounded-sm"
                             />
                             <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Compra en cuotas</span>
                           </label>

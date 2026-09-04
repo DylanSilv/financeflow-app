@@ -153,8 +153,8 @@ function SidebarContent({
     <div className="flex flex-col h-full">
 
       {/* ── Logo ── */}
-      <div className="flex items-center gap-3 px-2 mb-8 flex-shrink-0">
-        <div className="w-8 h-8 rounded-xl bg-white p-[3px] flex-shrink-0 shadow shadow-white/10">
+      <div className="flex items-center gap-3 px-2 mb-8 shrink-0">
+        <div className="w-8 h-8 rounded-xl bg-white p-[3px] shrink-0 shadow-sm shadow-white/10">
           <img src="/logo.png" alt="FinTrack" className="w-full h-full object-contain rounded-lg" />
         </div>
         <div className="flex flex-col leading-tight">
@@ -198,7 +198,7 @@ function SidebarContent({
                         : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/40'
                     }`}
                   >
-                    <item.icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
+                    <item.icon className={`w-4 h-4 shrink-0 transition-colors ${
                       active ? 'text-[#00ba8a]' : ''
                     }`} />
                     {item.name}
@@ -211,7 +211,7 @@ function SidebarContent({
       </nav>
 
       {/* ── Footer ── */}
-      <div className="flex-shrink-0 pt-4 space-y-1 border-t border-zinc-800/50">
+      <div className="shrink-0 pt-4 space-y-1 border-t border-zinc-800/50">
         {/* Settings */}
         <div className="relative">
           {isActive('/settings') && (
@@ -249,14 +249,14 @@ function SidebarContent({
 
         {/* User card */}
         <div className="mt-2 bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-3 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow shadow-indigo-500/20">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white shrink-0 shadow-sm shadow-indigo-500/20">
             {user?.name?.[0]?.toUpperCase() ?? 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate leading-tight">{user?.name ?? 'Usuario'}</p>
             <p className="text-[11px] text-zinc-500 truncate">{user?.email ?? ''}</p>
           </div>
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <Zap className="w-3 h-3 text-indigo-500/50" />
           </div>
         </div>
@@ -310,7 +310,7 @@ export const MainLayout = () => {
       <div className="flex h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden">
 
         {/* ── Sidebar desktop ── */}
-        <aside className="hidden md:flex w-60 flex-shrink-0 flex-col p-4 border-r border-[#003352]/40 bg-[#080f14] h-full select-none">
+        <aside className="hidden md:flex w-60 shrink-0 flex-col p-4 border-r border-[#003352]/40 bg-[#080f14] h-full select-none">
           <SidebarContent idPrefix="desktop" {...sidebarProps} />
         </aside>
 
@@ -345,7 +345,7 @@ export const MainLayout = () => {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* Header móvil */}
-          <div className="md:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-[#003352]/40 bg-[#080f14]">
+          <div className="md:hidden shrink-0 flex items-center gap-3 px-4 py-3 border-b border-[#003352]/40 bg-[#080f14]">
             <button onClick={() => setSidebarOpen(v => !v)}
               className="p-1.5 text-zinc-400 hover:text-white transition-colors rounded-lg hover:bg-zinc-800"
               aria-label="Abrir menú">

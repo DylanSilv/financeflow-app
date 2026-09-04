@@ -108,7 +108,7 @@ export const EditCardModal = ({ card, onClose, onSave }: Props) => {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="bg-[#0f0f0f] border border-zinc-800 w-full max-w-lg rounded-2xl shadow-2xl pointer-events-auto overflow-hidden max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-[#141414] flex-shrink-0">
+              <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-[#141414] shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-500/10 rounded-lg">
                     <CardIcon className="w-5 h-5 text-indigo-400" />

@@ -74,8 +74,8 @@ function MockDashboard() {
         <div className="p-5 space-y-4">
           {/* Greeting simulado */}
           <div>
-            <div className="h-3 w-24 bg-zinc-800 rounded mb-2" />
-            <div className="h-6 w-48 bg-zinc-700 rounded" />
+            <div className="h-3 w-24 bg-zinc-800 rounded-sm mb-2" />
+            <div className="h-6 w-48 bg-zinc-700 rounded-sm" />
           </div>
 
           {/* KPI cards */}
@@ -99,7 +99,7 @@ function MockDashboard() {
           <div className="bg-[#171717] border border-zinc-800/50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1 h-4 bg-indigo-500 rounded-full" />
-              <div className="h-3 w-36 bg-zinc-700 rounded" />
+              <div className="h-3 w-36 bg-zinc-700 rounded-sm" />
             </div>
             <div className="h-24 flex items-end gap-1.5">
               {[20,35,28,42,38,55,45,62,48,70,58,80,65,120,95].map((h, i) => (
@@ -128,7 +128,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-800/50 bg-[#09090b]/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-white p-[3px] shadow shadow-white/10">
+            <div className="w-8 h-8 rounded-xl bg-white p-[3px] shadow-sm shadow-white/10">
               <img src="/logo.png" alt="FinTrack" className="w-full h-full object-contain rounded-lg" />
             </div>
             <span className="font-semibold text-white tracking-tight">FinTrack</span>

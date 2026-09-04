@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Toggle } from '@/components/ui/Toggle';
+import { SwitchField } from '@/components/ui/switch-field';
 
 interface Props {
   isOpen:     boolean;
@@ -130,7 +130,7 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 </div>
 
                 {/* Toggle objetivo */}
-                <Toggle
+                <SwitchField
                   checked={hasTarget}
                   onChange={setHasTarget}
                   label="Tengo un objetivo en mente"

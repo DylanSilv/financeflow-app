@@ -4,7 +4,7 @@ import { Plus, Tag, Pencil, Trash2 } from 'lucide-react';
 import { useCategoryData, Category } from '@/hooks/useCategoryData';
 import { CategoryModal } from './CategoryModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 16 },
@@ -25,7 +25,7 @@ function CategoryChip({ category, index, onEdit, onDelete }: {
     >
       {/* Dot de color */}
       <div
-        className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center"
+        className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center"
         style={{ backgroundColor: (category.color ?? '#71717a') + '22' }}
       >
         <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color ?? '#71717a' }} />
@@ -42,7 +42,7 @@ function CategoryChip({ category, index, onEdit, onDelete }: {
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity flex-shrink-0">
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity shrink-0">
         <motion.button
           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
           onClick={onEdit}
@@ -116,7 +116,7 @@ export const Categories = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1,2,3,4,5,6].map(i => (
             <div key={i} className="bg-[#111111] border border-zinc-800 rounded-2xl p-4 flex items-center gap-3">
-              <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+              <Skeleton className="w-10 h-10 rounded-full shrink-0" />
               <div className="flex-1 flex flex-col gap-2">
                 <Skeleton className="h-4 w-28" />
                 <Skeleton className="h-3 w-20" />

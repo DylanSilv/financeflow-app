@@ -102,7 +102,7 @@ export const CategoryModal = ({ isOpen, onClose, onSuccess, category }: Props) =
               <form onSubmit={handleSubmit} className="p-5 space-y-5">
                 {/* Preview */}
                 <div className="flex items-center gap-3 p-3 bg-zinc-900/50 rounded-xl">
-                  <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <div className="w-8 h-8 rounded-full shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-sm font-medium text-white truncate">
                     {name || 'Nombre de la categoría'}
                   </span>

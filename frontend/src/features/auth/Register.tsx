@@ -154,7 +154,7 @@ export const Register = () => {
         </div>
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white p-[3px] shadow shadow-white/10">
+          <div className="w-9 h-9 rounded-xl bg-white p-[3px] shadow-sm shadow-white/10">
             <img src="/logo.png" alt="FinTrack" className="w-full h-full object-contain rounded-lg" />
           </div>
           <span className="text-lg font-semibold tracking-tight text-white">FinTrack</span>
@@ -176,7 +176,7 @@ export const Register = () => {
           <div className="space-y-5">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-start gap-4">
-                <div className="w-9 h-9 rounded-lg bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-9 h-9 rounded-lg bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5">
                   <Icon className="w-4 h-4 text-indigo-400" />
                 </div>
                 <div>

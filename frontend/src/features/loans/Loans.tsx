@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, CheckCircle2, Clock, TrendingDown, Wallet, Trash2, Plus, Pencil } from 'lucide-react';
 import { useLoanData, Loan } from '@/hooks/useLoanData';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AddLoanModal } from './AddLoanModal';
 import { EditLoanModal } from './EditLoanModal';
 import { useAccountsCache } from '@/hooks/useAccountsCache';
@@ -64,7 +64,7 @@ function LoanCard({ loan, accounts, onPay, onEdit, onDelete, index }: {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <h3 className="text-base font-semibold text-white truncate">{loan.name}</h3>
-            {isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />}
+            {isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
           </div>
           <span className="text-xs text-zinc-500">
             {loan.loanType === 'PERSONAL' ? 'Préstamo personal' : 'Compra en cuotas'}
@@ -263,7 +263,7 @@ export const Loans = () => {
             transition={{ duration: 0.35, delay: 0.1 + i * 0.07, ease: [0.16, 1, 0.3, 1] }}
             className="bg-[#111111] border border-zinc-800 p-5 rounded-2xl flex items-center gap-4"
           >
-            <div className={`w-11 h-11 ${bgColor[card.color]} rounded-xl flex items-center justify-center flex-shrink-0`}>
+            <div className={`w-11 h-11 ${bgColor[card.color]} rounded-xl flex items-center justify-center shrink-0`}>
               <card.icon className={`w-5 h-5 ${iconColor[card.color]}`} />
             </div>
             {/* min-w-0 deja que el bloque se encoja; sin eso el importe se

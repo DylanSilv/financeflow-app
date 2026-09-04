@@ -5,7 +5,7 @@ import { useSavingsData, SavingsGoal } from '@/hooks/useSavingsData';
 import { AddSavingsGoalModal } from './AddSavingsGoalModal';
 import { EditSavingsGoalModal } from './EditSavingsGoalModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAccountsCache } from '@/hooks/useAccountsCache';
 
 interface Account { id: string; name: string; type: string; }

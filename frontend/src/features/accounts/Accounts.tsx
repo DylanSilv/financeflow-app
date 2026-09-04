@@ -4,7 +4,7 @@ import { Plus, Landmark, Pencil, Trash2 } from 'lucide-react';
 import { useAccountData, Account } from '@/hooks/useAccountData';
 import { AccountModal } from './AccountModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const fadeUp = (delay = 0) => ({
   initial:    { opacity: 0, y: 16 },
@@ -51,7 +51,7 @@ function AccountCard({
       className="bg-[#111111] border border-zinc-800 rounded-2xl p-5 flex items-center gap-4 hover:border-zinc-700 transition-colors group"
     >
       {/* Indicador de color */}
-      <div className={`w-3 h-12 rounded-full flex-shrink-0 ${colorCls(account.color)}`} />
+      <div className={`w-3 h-12 rounded-full shrink-0 ${colorCls(account.color)}`} />
 
       {/* Info */}
       <div className="flex-1 min-w-0">
@@ -60,7 +60,7 @@ function AccountCard({
       </div>
 
       {/* Balance */}
-      <div className="text-right flex-shrink-0">
+      <div className="text-right shrink-0">
         <p className={`text-lg font-bold ${isNegative ? 'text-red-400' : 'text-white'}`}>
           {isNegative ? '-' : ''}$
           {Math.abs(account.balance).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
@@ -73,7 +73,7 @@ function AccountCard({
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity flex-shrink-0">
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity shrink-0">
         <motion.button
           whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
           onClick={onEdit}

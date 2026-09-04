@@ -5,7 +5,7 @@ import { useFixedExpenseData, FixedExpense } from '@/hooks/useFixedExpenseData';
 import { AddFixedExpenseModal } from './AddFixedExpenseModal';
 import { EditFixedExpenseModal } from './EditFixedExpenseModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase';
 
 interface AutoPayResult {
@@ -96,7 +96,7 @@ function ExpenseRow({
       {/* Fila principal */}
       <div className="flex items-center gap-4 px-4 py-3.5">
         {/* Indicador de estado */}
-        <div className="flex-shrink-0 w-5 flex justify-center">
+        <div className="shrink-0 w-5 flex justify-center">
           {isPaid ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           ) : isOverdue ? (
@@ -113,17 +113,17 @@ function ExpenseRow({
               {expense.name}
             </span>
             {isOverdue && (
-              <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0 border border-red-500/20">
+              <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full shrink-0 border border-red-500/20">
                 Vencida
               </span>
             )}
             {expense.loanName && (
-              <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-full flex-shrink-0">
+              <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                 cuotas
               </span>
             )}
             {expense.autoPay && (
-              <RefreshCw className="w-3 h-3 text-indigo-400/60 flex-shrink-0" />
+              <RefreshCw className="w-3 h-3 text-indigo-400/60 shrink-0" />
             )}
           </div>
           {hasCuotas && (
@@ -140,7 +140,7 @@ function ExpenseRow({
         </div>
 
         {/* Día de vencimiento + último pago */}
-        <div className="hidden sm:block flex-shrink-0 w-24 text-center">
+        <div className="hidden sm:block shrink-0 w-24 text-center">
           <span className="text-xs text-zinc-500">día {expense.dueDate}</span>
           {expense.lastPaidAt && (
             <p className="text-[10px] text-zinc-600 mt-0.5">
@@ -150,7 +150,7 @@ function ExpenseRow({
         </div>
 
         {/* Monto */}
-        <div className="flex-shrink-0 w-24 text-right">
+        <div className="shrink-0 w-24 text-right">
           <span className={`text-sm font-semibold tabular-nums ${
             isPaid ? 'text-zinc-500' : isOverdue ? 'text-red-400' : 'text-zinc-100'
           }`}>
@@ -159,7 +159,7 @@ function ExpenseRow({
         </div>
 
         {/* Acciones */}
-        <div className="flex-shrink-0 flex items-center justify-end gap-1 w-36">
+        <div className="shrink-0 flex items-center justify-end gap-1 w-36">
           {/* Iconos editar/borrar: aparecen en hover sin empujar el botón Pagar */}
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
@@ -234,7 +234,7 @@ function ExpenseRow({
                         : 'border-zinc-800 hover:border-zinc-600 bg-[#161616]'
                     }`}
                   >
-                    <div className={`w-8 h-6 rounded-md bg-gradient-to-br ${card.color} flex-shrink-0`} />
+                    <div className={`w-8 h-6 rounded-md bg-gradient-to-br ${card.color} shrink-0`} />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-zinc-200 truncate">{card.name}</p>
                       <p className={`text-xs font-semibold tabular-nums ${
@@ -244,7 +244,7 @@ function ExpenseRow({
                       </p>
                     </div>
                     {selectedCard?.id === card.id && (
-                      <div className="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0" />
+                      <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
                     )}
                   </motion.button>
                 ))}
@@ -260,7 +260,7 @@ function ExpenseRow({
                       : 'border-zinc-800 hover:border-zinc-600 bg-[#161616]'
                   }`}
                 >
-                  <div className="w-8 h-6 rounded-md bg-zinc-700 flex-shrink-0 flex items-center justify-center">
+                  <div className="w-8 h-6 rounded-md bg-zinc-700 shrink-0 flex items-center justify-center">
                     <span className="text-zinc-500 text-[9px]">—</span>
                   </div>
                   <div>
@@ -419,7 +419,7 @@ export const FixedExpenses = () => {
             }`}
           >
             <div className="flex items-start gap-3">
-              <Zap className={`w-4 h-4 mt-0.5 flex-shrink-0 ${autoPayResult.count > 0 ? 'text-indigo-400' : 'text-zinc-500'}`} />
+              <Zap className={`w-4 h-4 mt-0.5 shrink-0 ${autoPayResult.count > 0 ? 'text-indigo-400' : 'text-zinc-500'}`} />
               <div>
                 {autoPayResult.count > 0 ? (
                   <>
@@ -437,7 +437,7 @@ export const FixedExpenses = () => {
                 )}
               </div>
             </div>
-            <button onClick={() => setAutoPayResult(null)} className="text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0 mt-0.5">
+            <button onClick={() => setAutoPayResult(null)} className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0 mt-0.5">
               <X className="w-4 h-4" />
             </button>
           </motion.div>
@@ -458,7 +458,7 @@ export const FixedExpenses = () => {
               </span>
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
+          <div className="text-right shrink-0">
             <span className="text-2xl font-bold text-white">{Math.round(paidPct)}%</span>
             <p className="text-xs text-zinc-500">pagado</p>
           </div>
@@ -482,7 +482,7 @@ export const FixedExpenses = () => {
         <div className="bg-[#111111] border border-zinc-800 rounded-2xl overflow-hidden">
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="flex items-center gap-4 px-4 py-3.5 border-b border-zinc-800/30">
-              <Skeleton className="h-3 w-3 rounded-full flex-shrink-0" />
+              <Skeleton className="h-3 w-3 rounded-full shrink-0" />
               <Skeleton className="h-4 flex-1" />
               <Skeleton className="h-3 w-16 hidden sm:block" />
               <Skeleton className="h-4 w-20" />
