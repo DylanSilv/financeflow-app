@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 
 import { AccountBalances } from './components/account-balances';
 import { ActiveLoans } from './components/active-loans';
-import { AutoPayBanner, type AutoPayEntry } from './components/autopay-banner';
+import { AutoPayBanner, type AutoPayEntry } from '@/components/autopay-banner';
 import { CategoryExpenses } from './components/category-expenses';
 import { EvolutionChart } from './components/evolution-chart';
 import { MetricCards } from './components/metric-cards';
