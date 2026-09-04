@@ -1,89 +1,153 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/lib/supabase';
 import { insufficientFundsMessage } from '@/lib/fundsError';
+import { fmtDec } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
-interface Account     { id: string; name: string; type: string; }
-interface ApiCategory { id: string; name: string; color: string | null; }
-interface CardOption  { id: string; name: string; type: string; dueDay: number | null; limit: number | null; balanceUsed: number; }
+interface Account {
+  id: string;
+  name: string;
+  type: string;
+}
+
+interface ApiCategory {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+interface CardOption {
+  id: string;
+  name: string;
+  type: string;
+  dueDay: number | null;
+  limit: number | null;
+  balanceUsed: number;
+}
 
 /** Fila cruda de `Card`: Postgres devuelve los numeric como string. */
 interface RawCard {
-  id: string; name?: string; type?: string; dueDay?: number | null;
-  limit?: string | number | null; balanceUsed?: string | number | null;
+  id: string;
+  name?: string;
+  type?: string;
+  dueDay?: number | null;
+  limit?: string | number | null;
+  balanceUsed?: string | number | null;
 }
 
 const toCardOption = (c: RawCard): CardOption => ({
-  id:          c.id,
-  name:        c.name ?? '',
-  type:        c.type ?? '',
-  dueDay:      c.dueDay ?? null,
-  limit:       c.limit != null ? Number(c.limit) : null,
+  id: c.id,
+  name: c.name ?? '',
+  type: c.type ?? '',
+  dueDay: c.dueDay ?? null,
+  limit: c.limit != null ? Number(c.limit) : null,
   balanceUsed: Number(c.balanceUsed ?? 0),
 });
 
 interface Props {
-  isOpen:    boolean;
-  onClose:   () => void;
+  isOpen: boolean;
+  onClose: () => void;
   onSuccess?: () => void;
 }
 
 const PAY_METHODS = [
-  { value: 'CASH',          label: 'Efectivo' },
-  { value: 'CREDIT_CARD',   label: 'Tarjeta crédito' },
-  { value: 'DEBIT_CARD',    label: 'Tarjeta débito' },
+  { value: 'CASH', label: 'Efectivo' },
+  { value: 'CREDIT_CARD', label: 'Tarjeta crédito' },
+  { value: 'DEBIT_CARD', label: 'Tarjeta débito' },
   { value: 'BANK_TRANSFER', label: 'Transferencia' },
 ];
 
-// YYYY-MM-DD en hora local
+/** El Select de Radix no admite "" como valor, así que el vacío va con clave. */
+const NONE = 'none';
+
+/** YYYY-MM-DD en hora local. */
 function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Convierte YYYY-MM-DD a ISO con mediodía UTC para evitar drift por timezone
+/** Mediodía UTC, para que la fecha no se corra por timezone. */
 function toUTCNoon(dateStr: string): string {
   return `${dateStr}T12:00:00.000Z`;
 }
 
+const money = (n: number) => `$${fmtDec(n)}`;
+
 export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
-  const [title,         setTitle]         = useState('');
-  const [amount,        setAmount]        = useState('');
-  const [date,          setDate]          = useState(todayISO);
-  const [type,          setType]          = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
-  const [categoryId,    setCategoryId]    = useState('');
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(todayISO);
+  const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
+  const [categoryId, setCategoryId] = useState(NONE);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
-  const [accountId,     setAccountId]     = useState('');
-  const [cardId,        setCardId]        = useState('');
-  const [withCuotas,    setWithCuotas]    = useState(false);
-  const [numCuotas,     setNumCuotas]     = useState('');
-  const [accounts,      setAccounts]      = useState<Account[]>([]);
-  const [creditCards,   setCreditCards]   = useState<CardOption[]>([]);
-  const [categories,    setCategories]    = useState<ApiCategory[]>([]);
-  const [balances,      setBalances]      = useState<Record<string, number>>({});
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState<string | null>(null);
+  const [accountId, setAccountId] = useState('');
+  const [cardId, setCardId] = useState(NONE);
+  const [withCuotas, setWithCuotas] = useState(false);
+  const [numCuotas, setNumCuotas] = useState('');
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [creditCards, setCreditCards] = useState<CardOption[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [balances, setBalances] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
-    setTitle(''); setAmount(''); setDate(todayISO());
-    setType('EXPENSE'); setCategoryId(''); setPaymentMethod('CASH');
-    setWithCuotas(false); setNumCuotas(''); setError(null);
-    setAccounts(prev => { if (prev.length > 0) setAccountId(prev[0].id); return prev; });
-    setCreditCards(prev => { if (prev.length > 0) setCardId(prev[0].id); return prev; });
+    setTitle('');
+    setAmount('');
+    setDate(todayISO());
+    setType('EXPENSE');
+    setPaymentMethod('CASH');
+    setWithCuotas(false);
+    setNumCuotas('');
+    setError(null);
   }, [isOpen]);
 
   useEffect(() => {
-    supabase.from('Account').select('id, name, type').eq('isArchived', false).order('name')
-      .then(({ data }) => { setAccounts(data ?? []); if (data?.length) setAccountId(data[0].id); }, () => {});
-    supabase.from('Category').select('id, name, color').order('name')
-      .then(({ data }) => { setCategories(data ?? []); if (data?.length) setCategoryId(data[0].id); }, () => {});
-    supabase.from('Card').select('id, name, type, dueDay, limit, balanceUsed').order('name')
+    supabase
+      .from('Account')
+      .select('id, name, type')
+      .eq('isArchived', false)
+      .order('name')
       .then(({ data }) => {
-        const credit = ((data ?? []) as RawCard[])
-          .filter(c => c.type === 'CREDIT')
-          .map(toCardOption);
+        setAccounts(data ?? []);
+        if (data?.length) setAccountId(data[0].id);
+      }, () => {});
+
+    supabase
+      .from('Category')
+      .select('id, name, color')
+      .order('name')
+      .then(({ data }) => setCategories(data ?? []), () => {});
+
+    supabase
+      .from('Card')
+      .select('id, name, type, dueDay, limit, balanceUsed')
+      .order('name')
+      .then(({ data }) => {
+        const credit = ((data ?? []) as RawCard[]).filter(c => c.type === 'CREDIT').map(toCardOption);
         setCreditCards(credit);
         if (credit.length) setCardId(credit[0].id);
       }, () => {});
@@ -93,19 +157,30 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   // gasto, el disponible que teníamos en memoria ya quedó viejo.
   useEffect(() => {
     if (!isOpen) return;
+
     supabase.rpc('get_balance_por_cuenta').then(({ data }) => {
       const rows = (data ?? []) as { id: string; balance: number }[];
       setBalances(Object.fromEntries(rows.map(r => [r.id, Number(r.balance)])));
     }, () => {});
-    supabase.from('Card').select('id, limit, balanceUsed').then(({ data }) => {
-      const byId = new Map(((data ?? []) as RawCard[]).map(c => [c.id, c]));
-      setCreditCards(prev => prev.map(c => {
-        const fresh = byId.get(c.id);
-        return fresh
-          ? { ...c, limit: fresh.limit != null ? Number(fresh.limit) : null, balanceUsed: Number(fresh.balanceUsed ?? 0) }
-          : c;
-      }));
-    }, () => {});
+
+    supabase
+      .from('Card')
+      .select('id, limit, balanceUsed')
+      .then(({ data }) => {
+        const byId = new Map(((data ?? []) as RawCard[]).map(c => [c.id, c]));
+        setCreditCards(prev =>
+          prev.map(c => {
+            const fresh = byId.get(c.id);
+            return fresh
+              ? {
+                  ...c,
+                  limit: fresh.limit != null ? Number(fresh.limit) : null,
+                  balanceUsed: Number(fresh.balanceUsed ?? 0),
+                }
+              : c;
+          }),
+        );
+      }, () => {});
   }, [isOpen]);
 
   // Disponible del medio de pago elegido. Null significa "sin tope que validar":
@@ -126,74 +201,60 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const insufficientFunds = availableFunds != null && parsedAmountPreview > availableFunds;
   // Aviso temprano: el gasto no supera el disponible pero se come más del 80 %.
   const nearlyOutOfFunds =
-    !insufficientFunds && availableFunds != null && availableFunds > 0 &&
-    parsedAmountPreview > 0 && parsedAmountPreview > availableFunds * 0.8;
-
-  const fmtMoney = (n: number) =>
-    `$${n.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    !insufficientFunds &&
+    availableFunds != null &&
+    availableFunds > 0 &&
+    parsedAmountPreview > 0 &&
+    parsedAmountPreview > availableFunds * 0.8;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!title.trim()) {
-      setError('El concepto es obligatorio.');
-      return;
-    }
+    if (!title.trim()) return setError('El concepto es obligatorio.');
 
     const parsedAmount = parseFloat(amount);
     if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
-      setError('El monto debe ser mayor a $0.');
-      return;
+      return setError('El monto debe ser mayor a $0.');
     }
 
-    if (!date) {
-      setError('La fecha es obligatoria.');
-      return;
-    }
-    const parsedDate = new Date(toUTCNoon(date));
-    if (isNaN(parsedDate.getTime())) {
-      setError('Fecha inválida.');
-      return;
-    }
+    if (!date) return setError('La fecha es obligatoria.');
+    if (isNaN(new Date(toUTCNoon(date)).getTime())) return setError('Fecha inválida.');
 
-    const parsedCuotas = withCuotas && paymentMethod === 'CREDIT_CARD' ? parseInt(numCuotas, 10) : 0;
+    const parsedCuotas =
+      withCuotas && paymentMethod === 'CREDIT_CARD' ? parseInt(numCuotas, 10) : 0;
     if (withCuotas && paymentMethod === 'CREDIT_CARD') {
       if (!numCuotas || isNaN(parsedCuotas) || parsedCuotas < 2) {
-        setError('La cantidad de cuotas debe ser 2 o más.');
-        return;
+        return setError('La cantidad de cuotas debe ser 2 o más.');
       }
     }
 
     if (type === 'EXPENSE' && availableFunds != null && parsedAmount > availableFunds) {
-      setError(`Saldo insuficiente. Disponible: ${fmtMoney(availableFunds)}.`);
-      return;
+      return setError(`Saldo insuficiente. Disponible: ${money(availableFunds)}.`);
     }
 
     setLoading(true);
     try {
       const { error: txErr } = await supabase.rpc('create_transaction', {
-        p_title:          title,
-        p_amount:         parsedAmount,
-        p_date:           toUTCNoon(date),
-        p_type:           type,
+        p_title: title,
+        p_amount: parsedAmount,
+        p_date: toUTCNoon(date),
+        p_type: type,
         p_payment_method: paymentMethod,
-        p_category_id:    categoryId || null,
-        p_card_id:        paymentMethod === 'CREDIT_CARD' ? (cardId || null) : null,
-        p_account_id:     paymentMethod !== 'CREDIT_CARD' ? (accountId || null) : null,
+        p_category_id: categoryId === NONE ? null : categoryId,
+        p_card_id: paymentMethod === 'CREDIT_CARD' && cardId !== NONE ? cardId : null,
+        p_account_id: paymentMethod !== 'CREDIT_CARD' ? accountId || null : null,
       });
       if (txErr) throw txErr;
 
       if (parsedCuotas >= 2 && paymentMethod === 'CREDIT_CARD') {
-        const installmentAmount = parsedAmount / parsedCuotas;
         const selectedCard = creditCards.find(c => c.id === cardId);
-        const dueDate = selectedCard?.dueDay ?? 10;
         const { error: feErr } = await supabase.rpc('create_fixed_expense_with_loan', {
-          p_name:               `Cuotas: ${title}`,
-          p_amount:             installmentAmount,
-          p_due_date:           dueDate,
+          p_name: `Cuotas: ${title}`,
+          p_amount: parsedAmount / parsedCuotas,
+          p_due_date: selectedCard?.dueDay ?? 10,
           p_total_installments: parsedCuotas,
-          p_paid_installments:  0,
+          p_paid_installments: 0,
         });
         if (feErr) throw feErr;
       }
@@ -204,254 +265,239 @@ export const AddTransactionModal = ({ isOpen, onClose, onSuccess }: Props) => {
       console.error('create_transaction falló:', err);
       // La base valida de nuevo: entre que leímos el disponible y guardamos, el
       // saldo pudo cambiar (otra pestaña, otro dispositivo).
-      setError(insufficientFundsMessage(err, 'No se pudo guardar el movimiento. Intenta de nuevo.'));
+      setError(insufficientFundsMessage(err, 'No se pudo guardar el movimiento. Intentá de nuevo.'));
     } finally {
       setLoading(false);
     }
   };
 
+  const cuotaPreview =
+    amount && numCuotas && parseInt(numCuotas, 10) >= 2 && !isNaN(parseFloat(amount))
+      ? parseFloat(amount) / parseInt(numCuotas, 10)
+      : null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-          />
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nuevo movimiento</DialogTitle>
+          <DialogDescription>Registrá un ingreso o un gasto.</DialogDescription>
+        </DialogHeader>
 
-          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', duration: 0.5, bounce: 0.3 }}
-              className="bg-[#111111] border border-zinc-800 w-full max-w-md rounded-2xl shadow-2xl shadow-black/50 pointer-events-auto overflow-hidden"
-            >
-              <div className="flex justify-between items-center p-6 border-b border-zinc-800/50">
-                <h2 className="text-xl font-semibold text-white">Nuevo Movimiento</h2>
-                <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          <ToggleGroup
+            type="single"
+            value={type}
+            onValueChange={v => v && setType(v as 'EXPENSE' | 'INCOME')}
+            variant="outline"
+            className="w-full *:flex-1"
+          >
+            <ToggleGroupItem value="EXPENSE">Gasto</ToggleGroupItem>
+            <ToggleGroupItem value="INCOME">Ingreso</ToggleGroupItem>
+          </ToggleGroup>
+
+          <div className="space-y-2">
+            <Label htmlFor="add-tx-title">Concepto</Label>
+            <Input
+              id="add-tx-title"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Ej. Cena con amigos"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-tx-amount">Monto</Label>
+              <div className="relative">
+                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                  $
+                </span>
+                <Input
+                  id="add-tx-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-7"
+                />
               </div>
+            </div>
 
-              <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="add-tx-date">
+                <Calendar className="size-3" /> Fecha
+              </Label>
+              <Input
+                id="add-tx-date"
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                max={todayISO()}
+              />
+            </div>
+          </div>
 
-                {/* Tipo: Gasto / Ingreso */}
-                <div className="flex bg-[#0a0a0a] p-1 rounded-lg border border-zinc-800">
-                  {(['EXPENSE', 'INCOME'] as const).map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setType(t)}
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                        type === t
-                          ? `bg-[#111111] ${t === 'EXPENSE' ? 'text-red-400' : 'text-emerald-400'} shadow-sm border border-zinc-800`
-                          : 'text-zinc-500 hover:text-zinc-300'
-                      }`}
-                    >
-                      {t === 'EXPENSE' ? 'Gasto' : 'Ingreso'}
-                    </button>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-tx-category">Categoría</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger id="add-tx-category" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Sin categoría</SelectItem>
+                  {categories.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
-                </div>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Concepto */}
-                <div className="space-y-2">
-                  <label htmlFor="add-tx-title" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Concepto</label>
-                  <input
-                    id="add-tx-title"
-                    type="text" value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    placeholder="Ej. Cena con amigos"
-                    className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-tx-payment">Pago</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id="add-tx-payment" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAY_METHODS.map(m => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-                {/* Monto + Fecha */}
-                <div className="flex gap-4">
-                  <div className="space-y-2 flex-1">
-                    <label htmlFor="add-tx-amount" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Monto</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-3 text-zinc-500">$</span>
-                      <input
-                        id="add-tx-amount"
-                        type="number" step="0.01" min="0.01" value={amount}
-                        onChange={e => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
-                      />
-                    </div>
+          {paymentMethod === 'CREDIT_CARD'
+            ? creditCards.length > 0 && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="add-tx-card">Tarjeta de crédito</Label>
+                    <Select value={cardId} onValueChange={setCardId}>
+                      <SelectTrigger id="add-tx-card" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Sin tarjeta</SelectItem>
+                        {creditCards.map(c => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  <div className="space-y-2 flex-1">
-                    <label htmlFor="add-tx-date" className="text-xs font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                      <Calendar className="w-3 h-3" /> Fecha
-                    </label>
-                    <input
-                      id="add-tx-date"
-                      type="date"
-                      value={date}
-                      onChange={e => setDate(e.target.value)}
-                      max={todayISO()}
-                      className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all [color-scheme:dark]"
-                    />
-                  </div>
-                </div>
-
-                {/* Categoría + Forma de pago */}
-                <div className="flex gap-4">
-                  <div className="space-y-2 flex-1">
-                    <label htmlFor="add-tx-category" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Categoría</label>
-                    <select
-                      id="add-tx-category"
-                      value={categoryId}
-                      onChange={e => setCategoryId(e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                    >
-                      <option value="">Sin categoría</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2 flex-1">
-                    <label htmlFor="add-tx-payment" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Pago</label>
-                    <select
-                      id="add-tx-payment"
-                      value={paymentMethod}
-                      onChange={e => setPaymentMethod(e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                    >
-                      {PAY_METHODS.map(m => (
-                        <option key={m.value} value={m.value}>{m.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Cuenta / Tarjeta de crédito */}
-                {paymentMethod === 'CREDIT_CARD' ? (
-                  creditCards.length > 0 && (
-                    <>
-                      <div className="space-y-2">
-                        <label htmlFor="add-tx-card" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Tarjeta de crédito</label>
-                        <select
-                          id="add-tx-card"
-                          value={cardId}
-                          onChange={e => setCardId(e.target.value)}
-                          className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                        >
-                          <option value="">Sin tarjeta</option>
-                          {creditCards.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
+                  {type === 'EXPENSE' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2.5">
+                        <Checkbox
+                          id="add-tx-cuotas-toggle"
+                          checked={withCuotas}
+                          onCheckedChange={checked => {
+                            setWithCuotas(checked === true);
+                            setNumCuotas('');
+                          }}
+                        />
+                        <Label htmlFor="add-tx-cuotas-toggle">Compra en cuotas</Label>
                       </div>
 
-                      {/* Cuotas */}
-                      {type === 'EXPENSE' && (
-                        <div className="space-y-3">
-                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={withCuotas}
-                              onChange={e => { setWithCuotas(e.target.checked); setNumCuotas(''); }}
-                              className="w-4 h-4 accent-indigo-500 rounded"
+                      {withCuotas && (
+                        <div className="flex items-start gap-4">
+                          <div className="flex-1 space-y-1">
+                            <Label htmlFor="add-tx-cuotas">Cantidad de cuotas</Label>
+                            <Input
+                              id="add-tx-cuotas"
+                              type="number"
+                              min="2"
+                              max="72"
+                              value={numCuotas}
+                              onChange={e => setNumCuotas(e.target.value)}
+                              placeholder="Ej. 12"
                             />
-                            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Compra en cuotas</span>
-                          </label>
-
-                          {withCuotas && (
-                            <div className="flex gap-4 items-start">
-                              <div className="space-y-1 flex-1">
-                                <label htmlFor="add-tx-cuotas" className="text-xs text-zinc-500">Cantidad de cuotas</label>
-                                <input
-                                  id="add-tx-cuotas"
-                                  type="number" min="2" max="72" value={numCuotas}
-                                  onChange={e => setNumCuotas(e.target.value)}
-                                  placeholder="Ej. 12"
-                                  className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all"
-                                />
-                              </div>
-                              {amount && numCuotas && parseInt(numCuotas) >= 2 && !isNaN(parseFloat(amount)) && (
-                                <div className="space-y-1 flex-1 pt-0.5">
-                                  <p className="text-xs text-zinc-500">Cuota mensual</p>
-                                  <p className="text-sm font-semibold text-indigo-400 py-2.5">
-                                    ${(parseFloat(amount) / parseInt(numCuotas)).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
-                                  </p>
-                                </div>
-                              )}
+                          </div>
+                          {cuotaPreview !== null && (
+                            <div className="flex-1 space-y-1">
+                              <p className="text-muted-foreground text-xs">Cuota mensual</p>
+                              <p className="py-2 text-sm font-semibold tabular-nums">
+                                {money(cuotaPreview)}
+                              </p>
                             </div>
                           )}
                         </div>
                       )}
-                    </>
-                  )
-                ) : (
-                  accounts.length > 0 && (
-                    <div className="space-y-2">
-                      <label htmlFor="add-tx-account" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Cuenta</label>
-                      <select
-                        id="add-tx-account"
-                        value={accountId}
-                        onChange={e => setAccountId(e.target.value)}
-                        className="w-full bg-[#0a0a0a] border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
-                      >
-                        {accounts.map(a => (
-                          <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                      </select>
                     </div>
-                  )
-                )}
-
-                {/* Disponible del medio de pago elegido */}
-                {availableFunds != null && (
-                  <div
-                    className={`flex items-center justify-between text-xs rounded-lg px-3 py-2.5 border ${
-                      insufficientFunds
-                        ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                        : nearlyOutOfFunds
-                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-500'
-                    }`}
-                  >
-                    <span>
-                      {insufficientFunds
-                        ? 'Saldo insuficiente'
-                        : nearlyOutOfFunds
-                          ? 'Te quedás casi sin saldo'
-                          : 'Disponible'}
-                    </span>
-                    <span className="font-semibold tabular-nums">
-                      {fmtMoney(availableFunds)}
-                      {parsedAmountPreview > 0 && !insufficientFunds && (
-                        <span className="font-normal opacity-70">
-                          {' → '}{fmtMoney(availableFunds - parsedAmountPreview)}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                )}
-
-                {error && <p className="text-red-400 text-xs">{error}</p>}
-
-                <div className="pt-4 mt-2 border-t border-zinc-800/50">
-                  <button
-                    type="submit" disabled={loading || insufficientFunds}
-                    className="w-full bg-white text-black font-semibold rounded-lg px-4 py-3 text-sm hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Guardando...' : insufficientFunds ? 'Saldo insuficiente' : 'Guardar Movimiento'}
-                  </button>
+                  )}
+                </>
+              )
+            : accounts.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="add-tx-account">Cuenta</Label>
+                  <Select value={accountId} onValueChange={setAccountId}>
+                    <SelectTrigger id="add-tx-account" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map(a => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </form>
-            </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
+              )}
+
+          {availableFunds != null && (
+            <div
+              className={cn(
+                'flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs',
+                insufficientFunds
+                  ? 'border-danger/30 bg-danger/10 text-danger'
+                  : nearlyOutOfFunds
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-500'
+                    : 'bg-muted/50 text-muted-foreground',
+              )}
+            >
+              <span>
+                {insufficientFunds
+                  ? 'Saldo insuficiente'
+                  : nearlyOutOfFunds
+                    ? 'Te quedás casi sin saldo'
+                    : 'Disponible'}
+              </span>
+              <span className="font-semibold tabular-nums">
+                {money(availableFunds)}
+                {parsedAmountPreview > 0 && !insufficientFunds && (
+                  <span className="font-normal opacity-70">
+                    {' → '}
+                    {money(availableFunds - parsedAmountPreview)}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+
+          {error && <p className="text-destructive text-xs">{error}</p>}
+
+          <DialogFooter>
+            <Button type="submit" disabled={loading || insufficientFunds} className="w-full">
+              {loading
+                ? 'Guardando…'
+                : insufficientFunds
+                  ? 'Saldo insuficiente'
+                  : 'Guardar movimiento'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };

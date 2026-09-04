@@ -1,51 +1,55 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Target } from 'lucide-react';
+import { Target } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SwitchField } from '@/components/ui/switch-field';
+import { ColorSwatches } from '@/components/color-swatches';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Toggle } from '@/components/ui/Toggle';
+
+import { GOAL_COLORS } from './goal-colors';
 
 interface Props {
-  isOpen:     boolean;
-  onClose:    () => void;
+  isOpen: boolean;
+  onClose: () => void;
   onSuccess?: () => void;
 }
 
-const GOAL_COLORS = [
-  { hex: '#10b981', label: 'Esmeralda' },
-  { hex: '#6366f1', label: 'Índigo'    },
-  { hex: '#a855f7', label: 'Violeta'   },
-  { hex: '#f59e0b', label: 'Ámbar'     },
-  { hex: '#f43f5e', label: 'Rosa'      },
-  { hex: '#EC0000', label: 'Rojo'      },
-  { hex: '#06b6d4', label: 'Cyan'      },
-];
-
 export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const user = useAuthStore(s => s.user);
-  const [name,          setName]          = useState('');
+  const [name, setName] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
-  const [hasTarget,     setHasTarget]     = useState(false);
-  const [targetAmount,  setTargetAmount]  = useState('');
-  const [deadline,      setDeadline]      = useState('');
-  const [color,         setColor]         = useState(GOAL_COLORS[0].hex);
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState<string | null>(null);
+  const [hasTarget, setHasTarget] = useState(false);
+  const [targetAmount, setTargetAmount] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [color, setColor] = useState(GOAL_COLORS[0].value);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!name.trim()) { setError('El nombre de la meta es obligatorio.'); return; }
+    if (!name.trim()) return setError('El nombre de la meta es obligatorio.');
     if (currentAmount && parseFloat(currentAmount) < 0) {
-      setError('El monto actual no puede ser negativo.'); return;
+      return setError('El monto actual no puede ser negativo.');
     }
     if (hasTarget) {
       if (!targetAmount || parseFloat(targetAmount) <= 0) {
-        setError('El monto objetivo debe ser mayor a $0.'); return;
+        return setError('El monto objetivo debe ser mayor a $0.');
       }
       if (currentAmount && parseFloat(currentAmount) > parseFloat(targetAmount)) {
-        setError('El monto ya ahorrado no puede superar el objetivo.'); return;
+        return setError('El monto ya ahorrado no puede superar el objetivo.');
       }
     }
 
@@ -54,15 +58,18 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
       const { error } = await supabase.from('SavingsGoal').insert({
         name,
         currentAmount: currentAmount ? parseFloat(currentAmount) : 0,
-        targetAmount:  hasTarget && targetAmount ? parseFloat(targetAmount) : 0,
-        deadline:      hasTarget && deadline ? deadline : null,
+        targetAmount: hasTarget && targetAmount ? parseFloat(targetAmount) : 0,
+        deadline: hasTarget && deadline ? deadline : null,
         color,
-        userId:        user!.id,
+        userId: user!.id,
       });
       if (error) throw error;
 
-      setName(''); setCurrentAmount(''); setTargetAmount('');
-      setDeadline(''); setHasTarget(false);
+      setName('');
+      setCurrentAmount('');
+      setTargetAmount('');
+      setDeadline('');
+      setHasTarget(false);
       onClose();
       onSuccess?.();
     } catch (err) {
@@ -74,134 +81,108 @@ export const AddSavingsGoalModal = ({ isOpen, onClose, onSuccess }: Props) => {
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md z-40"
+    <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 rounded-lg p-2">
+              <Target className="text-primary size-5" />
+            </div>
+            <div>
+              <DialogTitle>Nuevo ahorro</DialogTitle>
+              <DialogDescription>Creá un fondo con o sin objetivo fijo.</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="goal-name">Nombre</Label>
+            <Input
+              id="goal-name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Ej. Viaje a Brasil"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="goal-current">
+              Ya ahorrado <span className="text-muted-foreground font-normal">(opcional)</span>
+            </Label>
+            <div className="relative">
+              <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                $
+              </span>
+              <Input
+                id="goal-current"
+                type="number"
+                step="0.01"
+                min="0"
+                value={currentAmount}
+                onChange={e => setCurrentAmount(e.target.value)}
+                placeholder="0.00"
+                className="pl-7"
+              />
+            </div>
+          </div>
+
+          <SwitchField
+            checked={hasTarget}
+            onChange={setHasTarget}
+            label="Tengo un objetivo en mente"
+            sublabel="Definir monto y fecha límite"
           />
 
-          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-[#0f0f0f] border border-zinc-800 w-full max-w-md rounded-2xl shadow-2xl pointer-events-auto overflow-hidden"
-            >
-              <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-[#141414]">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-500/10 rounded-lg">
-                    <Target className="w-5 h-5 text-emerald-400" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">Nueva Meta de Ahorro</h2>
-                </div>
-                <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
-
-                <div className="space-y-2">
-                  <label htmlFor="goal-name" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Nombre</label>
-                  <input
-                    id="goal-name"
-                    type="text" required value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Ej. Fondo de emergencia, Viaje..."
-                    className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
+          {hasTarget && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="goal-target">Monto objetivo</Label>
+                <div className="relative">
+                  <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                    $
+                  </span>
+                  <Input
+                    id="goal-target"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={targetAmount}
+                    onChange={e => setTargetAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="pl-7"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="goal-current" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto actual ahorrado</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-zinc-600">$</span>
-                    <input
-                      id="goal-current"
-                      type="number" min="0" step="0.01" value={currentAmount}
-                      onChange={e => setCurrentAmount(e.target.value)}
-                      placeholder="0"
-                      className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Toggle objetivo */}
-                <Toggle
-                  checked={hasTarget}
-                  onChange={setHasTarget}
-                  label="Tengo un objetivo en mente"
-                  sublabel="Definir monto y fecha límite"
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="goal-deadline">
+                  Fecha límite{' '}
+                  <span className="text-muted-foreground font-normal">(opcional)</span>
+                </Label>
+                <Input
+                  id="goal-deadline"
+                  type="date"
+                  value={deadline}
+                  onChange={e => setDeadline(e.target.value)}
                 />
+              </div>
+            </div>
+          )}
 
-                <AnimatePresence>
-                  {hasTarget && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-2 gap-4 pt-1">
-                        <div className="space-y-2">
-                          <label htmlFor="goal-target" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Monto objetivo</label>
-                          <div className="relative">
-                            <span className="absolute left-4 top-3 text-zinc-600">$</span>
-                            <input
-                              id="goal-target"
-                              type="number" required={hasTarget} min="1" value={targetAmount}
-                              onChange={e => setTargetAmount(e.target.value)}
-                              placeholder="0"
-                              className="w-full bg-[#161616] border border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label htmlFor="goal-deadline" className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Fecha límite (opcional)</label>
-                          <input
-                            id="goal-deadline"
-                            type="date" value={deadline}
-                            onChange={e => setDeadline(e.target.value)}
-                            className="w-full bg-[#161616] border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-all"
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Color */}
-                <div className="space-y-3">
-                  <label className="text-xs font-medium text-zinc-500 uppercase tracking-tighter">Color</label>
-                  <div className="flex gap-2.5">
-                    {GOAL_COLORS.map(c => (
-                      <button
-                        key={c.hex} type="button"
-                        onClick={() => setColor(c.hex)}
-                        style={{ backgroundColor: c.hex }}
-                        className={`w-7 h-7 rounded-full border-2 transition-all ${color === c.hex ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-80'}`}
-                        title={c.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {error && <p className="text-red-400 text-xs">{error}</p>}
-
-                <button
-                  type="submit" disabled={loading}
-                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl px-4 py-3.5 text-sm transition-all disabled:opacity-50"
-                >
-                  {loading ? 'Guardando...' : 'Crear Ahorro'}
-                </button>
-              </form>
-            </motion.div>
+          <div className="space-y-3">
+            <Label>Color</Label>
+            <ColorSwatches swatches={GOAL_COLORS} value={color} onChange={setColor} />
           </div>
-        </>
-      )}
-    </AnimatePresence>
+
+          {error && <p className="text-destructive text-xs">{error}</p>}
+
+          <DialogFooter>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? 'Creando…' : 'Crear ahorro'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
