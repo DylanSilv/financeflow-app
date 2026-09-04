@@ -19,4 +19,16 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Componentes generados por shadcn/ui: se actualizan regenerándolos desde
+    // el registro, así que no los adaptamos a las convenciones del proyecto.
+    // Exportan variantes junto a componentes (only-export-components) y el
+    // skeleton del sidebar usa Math.random para el ancho (purity).
+    files: ['src/components/ui/**/*.{ts,tsx}', 'src/hooks/use-mobile.ts'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ])

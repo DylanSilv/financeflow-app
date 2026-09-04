@@ -20,8 +20,8 @@ function PrivateRoute() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#00ba8a] rounded-full animate-spin" />
+      <div className="bg-background flex min-h-screen items-center justify-center">
+        <div className="border-muted border-t-primary h-8 w-8 animate-spin rounded-full border-2" />
       </div>
     );
   }

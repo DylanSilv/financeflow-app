@@ -158,3 +158,14 @@ html {
 .animate-logo-scroll:hover {
   animation-play-state: paused;
 }
+
+/* Barra de progreso de navegación */
+@keyframes nav-progress {
+  0%   { width: 0%;   opacity: 1; }
+  70%  { width: 100%; opacity: 1; }
+  100% { width: 100%; opacity: 0; }
+}
+
+.animate-nav-progress {
+  animation: nav-progress 0.75s ease-out forwards;
+}
